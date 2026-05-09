@@ -134,10 +134,27 @@ img {
   margin-bottom: var(--s-5);
 }
 
+/* Sticky variant — keeps the header (and the primary action) on screen while
+   the grid below scrolls. */
+.screen__header--sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: var(--s-3) 0;
+  background: linear-gradient(180deg, var(--bg-app) 0%, var(--bg-app) 80%, transparent 100%);
+  margin-bottom: var(--s-3);
+  /* Solid panel so cards under the gradient don't bleed into the title. */
+  backdrop-filter: blur(4px);
+}
+
 .screen__header h1 {
   margin: 0;
   font-size: 2rem;
   font-weight: 600;
+}
+
+.screen__primary {
+  margin-left: auto;
 }
 
 .screen__back {

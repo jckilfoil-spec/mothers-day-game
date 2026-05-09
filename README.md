@@ -13,8 +13,12 @@ The game runs in any modern browser — no install, no account, no tracking.
 1. Click **Start**.
 2. Tap **Add character** and pick a photo. Drag the circle to frame the face, slide to resize, hit **Looks good →**.
 3. Give them a name and a personal Mother's Day message.
-4. Pick **Mountain Ascent** or **Cave Descent**.
-5. **Arrows** or **A/D** to move. **Space** to jump. **Click** the silly little monsters to defeat them. Reach the flag (or the crystal) to win.
+4. Pick an adventure:
+   - **Mountain Ascent** — climb to the flag at the top.
+   - **Cave Descent** — drop down through one-way ledges to the glowing crystal.
+   - **Beach Run** — sprint across hot sand to find a shark's tooth. Hot sand bounces you (no damage, just "ouch!").
+   - **Drive Home** — dodge dropped cell phones and patrolling cars to reach the family at home.
+5. **Arrows** or **A/D** to move. **Space** or **↑** to jump (you can jump _through_ platforms from below). **↓** to drop down through a platform. **Click** monsters to defeat them.
 
 Touch devices get on-screen controls instead of the keyboard.
 

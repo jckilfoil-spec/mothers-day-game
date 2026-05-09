@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyClickDamage,
+  applyHazardBounce,
   makePlayer,
   reachedGoal,
   rectsOverlap,
   respawnIfFell,
   stepEnemies,
+  stepHazards,
   stepPlayer,
 } from '../src/game/physics.js';
 import { makeEnemy } from '../src/game/enemy.js';
-import type { InputState, Platform } from '../src/game/types.js';
+import type { Hazard, InputState, Platform } from '../src/game/types.js';
 import { PHYSICS } from '../src/game/types.js';
 
 function noInput(): InputState {
@@ -260,6 +262,57 @@ describe('one-way platforms', () => {
     // The player should have moved well past the platform's left edge — one-way
     // platforms don't block horizontal motion.
     expect(p.x).toBeGreaterThan(80);
+  });
+});
+
+describe('hazards', () => {
+  const hotSand: Hazard = { x: 100, y: 480, w: 80, h: 12, variant: 'hot-sand' };
+
+  it('bounces the player up on first contact', () => {
+    const p = makePlayer(120, 400);
+    const hit = applyHazardBounce(p, [hotSand]);
+    expect(hit).toBe(hotSand);
+    expect(p.vy).toBe(PHYSICS.hazardBounce);
+    expect(p.hurtT).toBeGreaterThan(0);
+  });
+
+  it('does not re-trigger while the player is still in the hurt window', () => {
+    const p = makePlayer(120, 400);
+    applyHazardBounce(p, [hotSand]);
+    const second = applyHazardBounce(p, [hotSand]);
+    expect(second).toBeNull();
+  });
+
+  it('ignores hazards the player does not overlap', () => {
+    const p = makePlayer(0, 0);
+    expect(applyHazardBounce(p, [hotSand])).toBeNull();
+    expect(p.hurtT).toBe(0);
+  });
+
+  it('patrols cars between minX and maxX', () => {
+    const car: Hazard = {
+      x: 200,
+      y: 400,
+      w: 100,
+      h: 50,
+      variant: 'car',
+      speed: 2,
+      dir: 1,
+      minX: 100,
+      maxX: 600,
+    };
+    const startX = car.x;
+    stepHazards([car]);
+    expect(car.x).toBeGreaterThan(startX);
+    for (let i = 0; i < 1000; i++) stepHazards([car]);
+    expect(car.x + car.w).toBeLessThanOrEqual(car.maxX!);
+    expect(car.x).toBeGreaterThanOrEqual(car.minX!);
+  });
+
+  it('stationary hazards (no speed) do not move', () => {
+    const phone: Hazard = { x: 50, y: 100, w: 30, h: 14, variant: 'cell-phone' };
+    stepHazards([phone]);
+    expect(phone.x).toBe(50);
   });
 });
 

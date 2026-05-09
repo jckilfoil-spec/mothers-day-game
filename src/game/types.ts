@@ -61,11 +61,24 @@ export interface PlayerState {
   jumpBuffer: number;
   /** Frames remaining where one-way platforms are ignored — set when the player taps Down. */
   dropThrough: number;
+  /** Frames of "ouch" invincibility after touching a hazard. While > 0, hazards don't re-trigger. */
+  hurtT: number;
   /** Current animation phase counter. */
   animT: number;
   /** Attack swing remaining (frames). */
   attackT: number;
   walking: boolean;
+}
+
+/** A non-killable obstacle. Touching it bounces the player up and away — no damage, no death,
+ *  just a comedic "ouch" with a brief invincibility window so the player can escape. */
+export interface Hazard extends Rect {
+  variant: 'hot-sand' | 'cell-phone' | 'car';
+  /** Patrol speed (px/frame). 0 = stationary. */
+  speed?: number;
+  dir?: 1 | -1;
+  minX?: number;
+  maxX?: number;
 }
 
 export interface LevelData {
@@ -76,10 +89,14 @@ export interface LevelData {
   playerStart: Vec2;
   platforms: Platform[];
   enemies: EnemyState[];
-  /** World position of the goal (flag center / crystal center). */
+  hazards: Hazard[];
+  /** World position of the goal (flag center / crystal center / shark tooth / front door). */
   goal: Vec2;
-  /** Direction the camera primarily scrolls. Mountain = up (-1), cave = down (1). */
-  scrollDir: -1 | 1;
+  /** Direction the camera primarily scrolls. Mountain = up (-1), cave = down (1).
+   *  For horizontal levels (beach/car), set 0 — camera will not bias vertically. */
+  scrollDir: -1 | 0 | 1;
+  /** Which axis the progress bar uses for "% to goal". Defaults to 'y' for legacy levels. */
+  progressAxis?: 'x' | 'y';
 }
 
 export interface InputState {
@@ -108,4 +125,8 @@ export const PHYSICS = {
   jumpBufferFrames: 8,
   /** Frames the player ignores one-way platforms after pressing Down. */
   dropThroughFrames: 12,
+  /** Bounce velocity when touching a hazard. */
+  hazardBounce: -14,
+  /** Frames of invincibility after a hazard touch. */
+  hurtFrames: 45,
 };

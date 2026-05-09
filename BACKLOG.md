@@ -21,8 +21,13 @@ Two natural follow-ups (both noted from John 2026-05-09):
 
 - [ ] **Auto face detection** via face-api.js (currently manual crop only — see CLAUDE.md for
       why). Would shave a step off the editor for non-technical users uploading a photo.
+- [ ] **More maps.** Beach + Car shipped 2026-05-09 — keep going. Candidate themes:
+      garden (avoid bees, find a hidden seed); kitchen (jump between counters, find the
+      mom-favorite mug); space (zero-gravity jumps, find a star).
 - [ ] **Moving platforms.** One per level, slow horizontal traverse. Adds variety without
       raising difficulty much.
+- [ ] **Smarter hazards.** Cars currently ignore the player; could honk and slow when the
+      player is close (telegraphed danger). Cell phones could buzz/glow when nearby.
 - [ ] **Per-character map progress.** Persist completion + best stars per (character, map)
       pair. Show a "✓ done" badge on the map tile for that character.
 - [ ] **Mid-level checkpoints.** Currently respawn-on-fall snaps to the highest platform under

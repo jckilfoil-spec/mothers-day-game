@@ -5,7 +5,15 @@
  * Tested in tests/physics.test.ts.
  */
 
-import { PHYSICS, type EnemyState, type InputState, type Platform, type PlayerState, type Rect } from './types.js';
+import {
+  PHYSICS,
+  type EnemyState,
+  type Hazard,
+  type InputState,
+  type Platform,
+  type PlayerState,
+  type Rect,
+} from './types.js';
 
 export function makePlayer(x: number, y: number): PlayerState {
   return {
@@ -21,6 +29,7 @@ export function makePlayer(x: number, y: number): PlayerState {
     airT: 0,
     jumpBuffer: 0,
     dropThrough: 0,
+    hurtT: 0,
     animT: 0,
     attackT: 0,
     walking: false,
@@ -160,6 +169,7 @@ export function stepPlayer(
   player.airT = grounded ? 0 : player.airT + 1;
   player.walking = grounded && Math.abs(player.vx) > 0.5;
   if (player.attackT > 0) player.attackT--;
+  if (player.hurtT > 0) player.hurtT--;
 
   // World bounds horizontally
   if (player.x < 0) {
@@ -171,6 +181,47 @@ export function stepPlayer(
   }
 
   player.animT++;
+}
+
+/** Patrol moving hazards (cars). Stationary hazards (speed=0 or undefined) are no-ops. */
+export function stepHazards(hazards: Hazard[]): void {
+  for (const h of hazards) {
+    if (!h.speed || h.speed === 0) continue;
+    const dir = h.dir ?? 1;
+    h.x += h.speed * dir;
+    const minX = h.minX ?? -Infinity;
+    const maxX = h.maxX ?? Infinity;
+    if (h.x < minX) {
+      h.x = minX;
+      h.dir = 1;
+    } else if (h.x + h.w > maxX) {
+      h.x = maxX - h.w;
+      h.dir = -1;
+    }
+  }
+}
+
+/** If the player overlaps any hazard and isn't already in their hurt-window, bounce them
+ *  up + slightly away. Returns the hazard that was touched (for SFX hooks), or null. */
+export function applyHazardBounce(player: PlayerState, hazards: Hazard[]): Hazard | null {
+  if (player.hurtT > 0) return null;
+  for (const h of hazards) {
+    const overlapX = Math.min(player.x + player.w, h.x + h.w) - Math.max(player.x, h.x);
+    const overlapY = Math.min(player.y + player.h, h.y + h.h) - Math.max(player.y, h.y);
+    if (overlapX > 0 && overlapY > 0) {
+      // Bounce up.
+      player.vy = PHYSICS.hazardBounce;
+      // Push away from hazard center horizontally.
+      const playerCx = player.x + player.w / 2;
+      const hazardCx = h.x + h.w / 2;
+      const sign = playerCx < hazardCx ? -1 : 1;
+      player.vx = sign * Math.max(Math.abs(player.vx), PHYSICS.moveSpeed * 0.8);
+      player.grounded = false;
+      player.hurtT = PHYSICS.hurtFrames;
+      return h;
+    }
+  }
+  return null;
 }
 
 /** Update enemy patrol motion. */

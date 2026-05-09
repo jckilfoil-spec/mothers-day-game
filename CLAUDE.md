@@ -57,12 +57,30 @@ main.ts ─→ Router ─→ screens/* ─→ state.ts (persistence)
 
 ### How to add a new map
 
-1. Add a paint function in `src/game/render.ts` (mirror the structure of `paintMountainScene` / `paintCaveScene`).
-2. Add a level factory in `src/game/levels.ts` returning `LevelData`.
+1. Add a scene paint function in `src/game/render.ts` (mirror `paintMountainScene` / `paintBeachScene`).
+2. Add a level factory in `src/game/levels.ts` returning `LevelData`. Include `hazards: []` if none.
+   For **vertical** levels set `scrollDir: -1` (climb) or `1` (descend) and `progressAxis: 'y'`.
+   For **horizontal** levels set `scrollDir: 0` and `progressAxis: 'x'`.
 3. Add the map to the `MapId` union in `src/state.ts`.
-4. Wire the new tile into `src/screens/mapSelect.ts`.
-5. Switch on the new id inside `src/game/game.ts:draw()` for the background painter.
-6. Add a test in `tests/levels.test.ts` asserting a valid start/goal/floor.
+4. Wire the new tile + preview painter into `src/screens/mapSelect.ts`.
+5. In `src/game/game.ts:draw()`, switch on the new id for both the background painter and the goal painter.
+6. In `goalColor()` + `goalEmoji()` (bottom of `game.ts`), add a case for the progress-bar cap.
+7. In `src/game/player.ts:drawStaff()`, add an orb color case so the staff matches the world.
+8. Add a test in `tests/levels.test.ts` asserting valid start/goal/floor + any new hazard invariants.
+
+### Hazards (no-death gameplay)
+
+Hazards are bouncy, never lethal. The contract:
+
+- A `Hazard` is a `Rect` with a `variant` and optional patrol fields (`speed`, `dir`, `minX`, `maxX`).
+- Each frame `applyHazardBounce` checks player overlap. On hit it sets `player.vy = -14`, pushes
+  horizontally away from the hazard center, and starts a 45-frame `hurtT` invincibility window.
+- During `hurtT > 0`, hazards are ignored (so the player doesn't infinite-bounce inside one) and
+  `drawPlayer` flickers the sprite alpha so the state is visible.
+- The bounce + horizontal push is enough to reliably escape; if it ever isn't, increase `hurtFrames`.
+
+To add a new hazard variant: add to the `Hazard.variant` union, paint it in `render.ts`, and
+dispatch in `game.ts:draw()`.
 
 ## Testing notes
 

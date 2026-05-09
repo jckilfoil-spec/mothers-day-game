@@ -12,8 +12,17 @@ import { sfx } from '../audio/sounds.js';
 /** Character manager — grid of cards with add / edit / delete / select. */
 export const characterManagerScreen: Screen = (root, nav) => {
   const grid = el('div', { class: 'char-grid' });
+  // Sticky top-right Play action — always visible without scrolling.
+  const playBtn = el('button', {
+    class: 'btn btn--big screen__primary',
+    onclick: () => {
+      sfx.click();
+      nav({ name: 'mapSelect' });
+    },
+  }, ['Play →']);
+  playBtn.style.display = 'none';
   const wrap = el('div', { class: 'screen' }, [
-    el('div', { class: 'screen__header' }, [
+    el('div', { class: 'screen__header screen__header--sticky' }, [
       el('button', {
         class: 'screen__back',
         title: 'Back to title',
@@ -23,6 +32,7 @@ export const characterManagerScreen: Screen = (root, nav) => {
         },
       }, ['‹']),
       el('h1', {}, ['Pick a hero']),
+      playBtn,
     ]),
     grid,
     el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
@@ -71,24 +81,17 @@ export const characterManagerScreen: Screen = (root, nav) => {
       // Replace grid with the empty state for first run
       clear(grid);
       grid.appendChild(empty);
+      playBtn.style.display = 'none';
       return;
     }
 
-    // Bottom actions bar — only when something is selected
-    const selectedExisting = grid.parentElement?.querySelector('.char-actions-bar');
-    if (selectedExisting) selectedExisting.remove();
+    // Show / hide and update the sticky Play button based on selection.
     const selected = chars.find((c) => c.id === selectedId);
     if (selected) {
-      const bar = el('div', { class: 'char-actions-bar' }, [
-        el('button', {
-          class: 'btn btn--big',
-          onclick: () => {
-            sfx.click();
-            nav({ name: 'mapSelect' });
-          },
-        }, [`Play with ${selected.name} →`]),
-      ]);
-      grid.parentElement?.insertBefore(bar, grid.nextSibling);
+      playBtn.style.display = '';
+      playBtn.textContent = `Play with ${selected.name} →`;
+    } else {
+      playBtn.style.display = 'none';
     }
   };
 

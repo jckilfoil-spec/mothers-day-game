@@ -9,15 +9,31 @@
  */
 
 import { Input } from './input.js';
-import { applyClickDamage, makePlayer, reachedGoal, respawnIfFell, stepEnemies, stepPlayer } from './physics.js';
+import {
+  applyClickDamage,
+  applyHazardBounce,
+  makePlayer,
+  reachedGoal,
+  respawnIfFell,
+  stepEnemies,
+  stepHazards,
+  stepPlayer,
+} from './physics.js';
 import { drawPlayer } from './player.js';
 import { drawEnemy } from './enemy.js';
 import {
+  paintBeachScene,
+  paintCar,
+  paintCarScene,
   paintCaveScene,
+  paintCellPhone,
   paintCrystal,
   paintFlag,
+  paintHotSand,
+  paintHouse,
   paintMountainScene,
   paintRockPlatform,
+  paintSharkTooth,
 } from './render.js';
 import type { LevelData, PlayerState } from './types.js';
 import { sfx, stopAmbient } from '../audio/sounds.js';
@@ -81,14 +97,15 @@ export class Game {
   private snapCameraToPlayer(): void {
     const px = this.player.x + this.player.w / 2;
     const py = this.player.y + this.player.h / 2;
-    const lookAhead = this.level.scrollDir === -1 ? -80 : 80;
+    const lookAheadX = this.player.facing * 100;
+    const lookAheadY = this.level.scrollDir * -80;
     this.camera.x = Math.max(
       0,
-      Math.min(this.level.width - this.viewport.w, px - this.viewport.w / 2),
+      Math.min(this.level.width - this.viewport.w, px + lookAheadX - this.viewport.w / 2),
     );
     this.camera.y = Math.max(
       -200,
-      Math.min(this.level.height - this.viewport.h + 100, py + lookAhead - this.viewport.h / 2),
+      Math.min(this.level.height - this.viewport.h + 100, py + lookAheadY - this.viewport.h / 2),
     );
   }
 
@@ -160,6 +177,12 @@ export class Game {
     }
     stepPlayer(this.player, this.input.state, this.level.platforms, this.level.enemies, this.level.width);
     stepEnemies(this.level.enemies);
+    stepHazards(this.level.hazards);
+    const bounced = applyHazardBounce(this.player, this.level.hazards);
+    if (bounced) {
+      if (bounced.variant === 'car') sfx.honk();
+      else sfx.ouch();
+    }
     respawnIfFell(this.player, this.level.platforms, this.level.height);
     if (reachedGoal(this.player, this.level.goal.x, this.level.goal.y)) {
       this.won = true;
@@ -173,14 +196,16 @@ export class Game {
   private updateCamera(): void {
     const px = this.player.x + this.player.w / 2;
     const py = this.player.y + this.player.h / 2;
-    // Center on player horizontally, clamped to world bounds.
-    const targetX = px - this.viewport.w / 2;
-    // Y bias: small look-ahead in the scroll direction (mountain looks up, cave looks down)
-    const lookAhead = this.level.scrollDir === -1 ? -80 : 80;
-    const targetY = py + lookAhead - this.viewport.h / 2;
+    // X look-ahead based on facing — shows more of what's in front of the player.
+    // Especially helps horizontal levels (beach, car) where direction-of-travel matters.
+    const lookAheadX = this.player.facing * 100;
+    const targetX = px + lookAheadX - this.viewport.w / 2;
+    // Y bias: zero for horizontal levels (scrollDir=0), otherwise look in scroll direction.
+    const lookAheadY = this.level.scrollDir * -80;
+    const targetY = py + lookAheadY - this.viewport.h / 2;
 
     // Smooth follow
-    this.camera.x += (targetX - this.camera.x) * 0.18;
+    this.camera.x += (targetX - this.camera.x) * 0.12;
     this.camera.y += (targetY - this.camera.y) * 0.18;
 
     // Clamp to world
@@ -194,11 +219,21 @@ export class Game {
     const { ctx } = this;
     const { w, h } = this.viewport;
 
-    // Background scene (parallax handled inside paint*Scene via scrollY)
-    if (this.level.map === 'mountain') {
-      paintMountainScene(ctx, { width: w, height: h, scrollY: this.camera.y, seed: 7 });
-    } else {
-      paintCaveScene(ctx, { width: w, height: h, scrollY: this.camera.y, seed: 21 });
+    // Background scene
+    const sceneOpts = { width: w, height: h, scrollY: this.camera.y, scrollX: this.camera.x };
+    switch (this.level.map) {
+      case 'mountain':
+        paintMountainScene(ctx, { ...sceneOpts, seed: 7 });
+        break;
+      case 'cave':
+        paintCaveScene(ctx, { ...sceneOpts, seed: 21 });
+        break;
+      case 'beach':
+        paintBeachScene(ctx, { ...sceneOpts, seed: 42 });
+        break;
+      case 'car':
+        paintCarScene(ctx, { ...sceneOpts, seed: 17 });
+        break;
     }
 
     // World transform
@@ -210,12 +245,37 @@ export class Game {
       paintRockPlatform(ctx, p.x, p.y, p.w, p.h, this.level.map);
     }
 
-    // Goal
     const t = performance.now();
-    if (this.level.map === 'mountain') {
-      paintFlag(ctx, this.level.goal.x, this.level.goal.y, t);
-    } else {
-      paintCrystal(ctx, this.level.goal.x, this.level.goal.y, t);
+
+    // Hazards (under enemies, over platforms — they're floor-level)
+    for (const hz of this.level.hazards) {
+      switch (hz.variant) {
+        case 'hot-sand':
+          paintHotSand(ctx, hz.x, hz.y, hz.w, hz.h, t);
+          break;
+        case 'cell-phone':
+          paintCellPhone(ctx, hz.x, hz.y, hz.w, hz.h, t);
+          break;
+        case 'car':
+          paintCar(ctx, hz.x, hz.y, hz.w, hz.h, hz.dir ?? 1, t);
+          break;
+      }
+    }
+
+    // Goal
+    switch (this.level.map) {
+      case 'mountain':
+        paintFlag(ctx, this.level.goal.x, this.level.goal.y, t);
+        break;
+      case 'cave':
+        paintCrystal(ctx, this.level.goal.x, this.level.goal.y, t);
+        break;
+      case 'beach':
+        paintSharkTooth(ctx, this.level.goal.x, this.level.goal.y, t);
+        break;
+      case 'car':
+        paintHouse(ctx, this.level.goal.x, this.level.goal.y, t);
+        break;
     }
 
     // Enemies
@@ -227,6 +287,7 @@ export class Game {
     drawPlayer(ctx, this.player, {
       faceImage: this.faceImg,
       variant: this.level.map,
+      hurtT: this.player.hurtT,
     });
 
     ctx.restore();
@@ -264,32 +325,27 @@ export class Game {
     ctx.fill();
     ctx.stroke();
 
-    // Progress 0..1 toward the goal
-    const startY = this.level.playerStart.y;
-    const goalY = this.level.goal.y;
-    const playerY = this.player.y;
-    const denom = goalY - startY;
-    const raw = denom === 0 ? 1 : (playerY - startY) / denom;
+    // Progress 0..1 toward the goal — uses progressAxis (defaults to 'y' for legacy levels).
+    const axis = this.level.progressAxis ?? 'y';
+    const startV = axis === 'x' ? this.level.playerStart.x : this.level.playerStart.y;
+    const goalV = axis === 'x' ? this.level.goal.x : this.level.goal.y;
+    const curV = axis === 'x' ? this.player.x : this.player.y;
+    const denom = goalV - startV;
+    const raw = denom === 0 ? 1 : (curV - startV) / denom;
     const progress = Math.max(0, Math.min(1, raw));
 
-    // Fill — direction-aware
-    const fillColor = this.level.scrollDir === -1 ? '#F4A56C' : '#6FB5A8';
+    // Bar always fills bottom→up, where the top is "100% to the goal" and bottom is "start".
+    const fillColor = goalColor(this.level.map);
     const fillH = barH * progress;
     if (fillH > 0.5) {
       ctx.fillStyle = fillColor;
-      if (this.level.scrollDir === -1) {
-        // Mountain: fill from the bottom up
-        roundedRect(ctx, barX, barY + barH - fillH, barW, fillH, radius);
-      } else {
-        // Cave: fill from the top down
-        roundedRect(ctx, barX, barY, barW, fillH, radius);
-      }
+      roundedRect(ctx, barX, barY + barH - fillH, barW, fillH, radius);
       ctx.fill();
     }
 
-    // Goal cap — circle at the goal end of the bar
+    // Goal cap — circle at the top of the bar.
     const goalCx = barX + barW / 2;
-    const goalCy = this.level.scrollDir === -1 ? barY : barY + barH;
+    const goalCy = barY;
     ctx.fillStyle = fillColor;
     ctx.beginPath();
     ctx.arc(goalCx, goalCy, 11, 0, Math.PI * 2);
@@ -298,10 +354,10 @@ export class Game {
     ctx.font = 'bold 11px serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this.level.scrollDir === -1 ? '🚩' : '💎', goalCx, goalCy);
+    ctx.fillText(goalEmoji(this.level.map), goalCx, goalCy);
 
     // "you are here" marker
-    const youCy = this.level.scrollDir === -1 ? barY + barH - fillH : barY + fillH;
+    const youCy = barY + barH - fillH;
     ctx.fillStyle = '#FFFEF8';
     ctx.strokeStyle = fillColor;
     ctx.lineWidth = 2.5;
@@ -318,6 +374,26 @@ export class Game {
     ctx.fillText(`${Math.round(progress * 100)}%`, goalCx, barY + barH + 8);
 
     ctx.restore();
+  }
+}
+
+function goalColor(map: string): string {
+  switch (map) {
+    case 'mountain': return '#F4A56C';
+    case 'cave': return '#6FB5A8';
+    case 'beach': return '#5BA8B8';
+    case 'car': return '#C75D5D';
+    default: return '#F4A56C';
+  }
+}
+
+function goalEmoji(map: string): string {
+  switch (map) {
+    case 'mountain': return '🚩';
+    case 'cave': return '💎';
+    case 'beach': return '🦈';
+    case 'car': return '🏠';
+    default: return '★';
   }
 }
 

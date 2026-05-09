@@ -102,6 +102,12 @@ export const sfx = {
   step(): void {
     tone({ freq: 180, type: 'sine', duration: 0.05, attack: 0.001, decay: 0.04, gain: 0.05 });
   },
+  ouch(): void {
+    tone({ freq: 700, freqEnd: 220, type: 'square', duration: 0.18, attack: 0.005, decay: 0.16, gain: 0.18 });
+  },
+  honk(): void {
+    tone({ freq: 240, freqEnd: 200, type: 'sawtooth', duration: 0.16, attack: 0.005, decay: 0.14, gain: 0.16 });
+  },
 };
 
 /**

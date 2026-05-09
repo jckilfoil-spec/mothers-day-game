@@ -5,8 +5,10 @@ import type { PlayerState } from './types.js';
 interface RenderOpts {
   /** Cropped circular face data URL, or null for the silhouette default. */
   faceImage: HTMLImageElement | null;
-  /** 'mountain' uses pale teal staff orb, 'cave' uses warm amber. */
-  variant: 'mountain' | 'cave';
+  /** Tints the staff orb to match the world: mountain=teal, cave=amber, beach=cyan, car=yellow. */
+  variant: 'mountain' | 'cave' | 'beach' | 'car';
+  /** When > 0, the player is in their hurt-window — flicker the sprite. */
+  hurtT?: number;
 }
 
 /** Draws the character into world coords. The caller should already have applied the camera transform. */
@@ -22,17 +24,27 @@ export function drawPlayer(
   const walkBob = player.walking ? Math.sin(player.animT * 0.3) * 2 : 0;
   const bob = player.grounded ? idleBob + walkBob : 0;
 
+  // Hurt flicker — rapidly toggle alpha so the player blinks during invincibility.
+  const hurtT = opts.hurtT ?? 0;
+  if (hurtT > 0 && Math.floor(hurtT / 4) % 2 === 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.translate(baseX, baseY + bob);
+    if (player.facing === -1) ctx.scale(-1, 1);
+    drawRobe(ctx);
+    drawFeet(ctx, player);
+    drawStaff(ctx, player, opts.variant);
+    drawHead(ctx, opts.faceImage);
+    ctx.restore();
+    return;
+  }
+
   ctx.save();
   ctx.translate(baseX, baseY + bob);
-
-  // Mirror by facing
   if (player.facing === -1) ctx.scale(-1, 1);
 
   drawRobe(ctx);
   drawFeet(ctx, player);
-  // Staff is drawn AFTER the body (so the body covers the lower shaft) but BEFORE
-  // the head (so the head paints on top — protecting the uploaded face from any
-  // accidental overlap).
   drawStaff(ctx, player, opts.variant);
   drawHead(ctx, opts.faceImage);
 
@@ -143,7 +155,7 @@ function drawHead(ctx: CanvasRenderingContext2D, faceImage: HTMLImageElement | n
 function drawStaff(
   ctx: CanvasRenderingContext2D,
   player: PlayerState,
-  variant: 'mountain' | 'cave',
+  variant: 'mountain' | 'cave' | 'beach' | 'car',
 ): void {
   // Anchor at chest, OUTSIDE the body silhouette on the facing-forward side. baseAngle is
   // positive (leans outward) so the orb ends up clearly to the side of the head — never
@@ -182,8 +194,16 @@ function drawStaff(
   ctx.fill();
 
   // Gnarled top + glowing orb (smaller glow so it doesn't bleed onto the face)
-  const orbColor = variant === 'mountain' ? '#A8E6DC' : '#FFB870';
-  const orbGlow = variant === 'mountain' ? 'rgba(168,230,220,0.5)' : 'rgba(255,184,112,0.5)';
+  const orbColor =
+    variant === 'mountain' ? '#A8E6DC'
+    : variant === 'cave' ? '#FFB870'
+    : variant === 'beach' ? '#A8DFEB'
+    : /* car */ '#FBC34A';
+  const orbGlow =
+    variant === 'mountain' ? 'rgba(168,230,220,0.5)'
+    : variant === 'cave' ? 'rgba(255,184,112,0.5)'
+    : variant === 'beach' ? 'rgba(168,223,235,0.5)'
+    : /* car */ 'rgba(251,195,74,0.5)';
   const rg = ctx.createRadialGradient(0, -62, 0, 0, -62, 14);
   rg.addColorStop(0, orbGlow);
   rg.addColorStop(1, 'rgba(0,0,0,0)');

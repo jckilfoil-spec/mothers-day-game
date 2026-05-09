@@ -9,7 +9,7 @@
  * to an in-memory store so the game stays playable but won't survive a reload.
  */
 
-export type MapId = 'mountain' | 'cave';
+export type MapId = 'mountain' | 'cave' | 'beach' | 'car';
 
 export interface Character {
   id: string;
