@@ -8,7 +8,7 @@ export type Route =
   | { name: 'editor'; characterId: string | null }
   | { name: 'mapSelect' }
   | { name: 'game'; map: MapId }
-  | { name: 'win'; map: MapId };
+  | { name: 'win'; map: MapId; elapsedMs?: number };
 
 export type Nav = (route: Route) => void;
 

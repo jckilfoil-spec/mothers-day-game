@@ -3,10 +3,12 @@ import { el, mount } from '../util/dom.js';
 import { getSelectedCharacter } from '../state.js';
 import { Confetti } from '../util/confetti.js';
 import { sfx } from '../audio/sounds.js';
+import { formatTime } from '../util/time.js';
 
 /** Win screen with confetti, big greeting, custom message, and four follow-up buttons. */
 export const winScreen: Screen = (root, nav, route) => {
   const map = route.name === 'win' ? route.map : 'mountain';
+  const elapsedMs = route.name === 'win' ? route.elapsedMs : undefined;
   const character = getSelectedCharacter();
   if (!character) {
     nav({ name: 'characters' });
@@ -28,6 +30,12 @@ export const winScreen: Screen = (root, nav, route) => {
         }, ['🙂']),
     el('p', { class: 'win__greeting' }, ["Happy Mother's Day,"]),
     el('h1', { class: 'win__name' }, [character.name + '!']),
+    elapsedMs && elapsedMs > 0
+      ? el('p', { class: 'win__time' }, [
+          el('span', { class: 'win__time-label' }, ['Finished in']),
+          el('span', { class: 'win__time-value' }, [formatTime(elapsedMs)]),
+        ])
+      : null,
     el('p', { class: 'win__msg' }, [character.customMessage]),
     el('p', { class: 'win__hint' }, ['Take a beat. Then —']),
     el('div', { class: 'win__buttons' }, [

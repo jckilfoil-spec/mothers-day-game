@@ -113,8 +113,8 @@ export const gameScreen: Screen = (root, nav, route) => {
       characterName: character.name,
     },
     {
-      onWin: () => {
-        nav({ name: 'win', map: mapId });
+      onWin: (elapsedMs) => {
+        nav({ name: 'win', map: mapId, elapsedMs });
       },
     },
   );

@@ -947,6 +947,29 @@ img {
   margin: 0 0 var(--s-4);
 }
 
+.win__time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--c-secondary-bg);
+  color: var(--c-secondary-text);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 1rem;
+  margin: 0 0 var(--s-5);
+}
+
+.win__time-label {
+  font-weight: 500;
+}
+
+.win__time-value {
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--c-primary);
+  font-variant-numeric: tabular-nums;
+}
+
 .win__face {
   width: 120px;
   height: 120px;

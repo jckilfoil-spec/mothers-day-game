@@ -38,6 +38,7 @@ import {
 import type { LevelData, PlayerState } from './types.js';
 import { sfx, stopAmbient } from '../audio/sounds.js';
 import { loadImage } from '../util/face.js';
+import { formatTime } from '../util/time.js';
 
 export interface GameOpts {
   level: LevelData;
@@ -47,7 +48,7 @@ export interface GameOpts {
 }
 
 export interface GameCallbacks {
-  onWin(): void;
+  onWin(elapsedMs: number): void;
 }
 
 export class Game {
@@ -62,6 +63,9 @@ export class Game {
   private camera = { x: 0, y: 0 };
   private viewport = { w: 800, h: 600 };
   private dpr = 1;
+  /** Multiplier applied to the world rendering. 1.0 on phones; up to ~1.5 on desktop —
+   *  scales sprites and platforms larger so wider screens don't make the action tiny. */
+  private worldScale = 1;
 
   private running = false;
   private rafId = 0;
@@ -71,6 +75,11 @@ export class Game {
 
   private won = false;
   private winT = 0;
+
+  /** Wall-clock ms when the player first moved (or null until they have). */
+  private startedAt: number | null = null;
+  /** Wall-clock ms when the player reached the goal (or null until they have). */
+  private completedAt: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, opts: GameOpts, callbacks: GameCallbacks) {
     this.canvas = canvas;
@@ -94,19 +103,34 @@ export class Game {
     this.snapCameraToPlayer();
   }
 
+  /** Effective viewport size in WORLD units (canvas px / worldScale). */
+  private viewWorld(): { w: number; h: number } {
+    return { w: this.viewport.w / this.worldScale, h: this.viewport.h / this.worldScale };
+  }
+
+  /** Pick a target camera X that centers the world if it fits, otherwise scrolls. */
+  private clampCameraX(targetX: number): number {
+    const { w: vw } = this.viewWorld();
+    if (this.level.width <= vw) {
+      // World is narrower than the (effective) viewport — center it always.
+      return (this.level.width - vw) / 2;
+    }
+    return Math.max(0, Math.min(this.level.width - vw, targetX));
+  }
+
+  private clampCameraY(targetY: number): number {
+    const { h: vh } = this.viewWorld();
+    return Math.max(-200, Math.min(this.level.height - vh + 100, targetY));
+  }
+
   private snapCameraToPlayer(): void {
     const px = this.player.x + this.player.w / 2;
     const py = this.player.y + this.player.h / 2;
+    const { w: vw, h: vh } = this.viewWorld();
     const lookAheadX = this.player.facing * 100;
     const lookAheadY = this.level.scrollDir * -80;
-    this.camera.x = Math.max(
-      0,
-      Math.min(this.level.width - this.viewport.w, px + lookAheadX - this.viewport.w / 2),
-    );
-    this.camera.y = Math.max(
-      -200,
-      Math.min(this.level.height - this.viewport.h + 100, py + lookAheadY - this.viewport.h / 2),
-    );
+    this.camera.x = this.clampCameraX(px + lookAheadX - vw / 2);
+    this.camera.y = this.clampCameraY(py + lookAheadY - vh / 2);
   }
 
   bindTouchButton(button: HTMLElement, key: 'left' | 'right' | 'jump' | 'down'): void {
@@ -118,6 +142,10 @@ export class Game {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.viewport = { w, h };
+    // Scale up the world rendering on wider viewports so desktop / large screens don't
+    // leave the action looking tiny. Mobile (anything ≤ ~800px wide) stays at 1.0,
+    // preserving the mobile-native baseline. Cap at 1.5 to keep proportions sane.
+    this.worldScale = Math.max(1, Math.min(1.5, w / 900));
     this.canvas.width = w * this.dpr;
     this.canvas.height = h * this.dpr;
     this.canvas.style.width = w + 'px';
@@ -129,8 +157,11 @@ export class Game {
 
   private handleClick(canvasX: number, canvasY: number): void {
     if (this.won) return;
-    const wx = canvasX + this.camera.x;
-    const wy = canvasY + this.camera.y;
+    // First click counts as "started" — clicking enemies is gameplay too.
+    if (this.startedAt === null) this.startedAt = performance.now();
+    // Convert canvas pixels into world units, accounting for worldScale.
+    const wx = canvasX / this.worldScale + this.camera.x;
+    const wy = canvasY / this.worldScale + this.camera.y;
     const hit = applyClickDamage(this.level.enemies, wx, wy, 1);
     if (hit) {
       sfx.hit();
@@ -138,6 +169,13 @@ export class Game {
       this.player.facing = wx > this.player.x + this.player.w / 2 ? 1 : -1;
       if (hit.hp === 0) sfx.defeat();
     }
+  }
+
+  /** Wall-clock ms elapsed since first input. 0 until the player moves. Frozen on win. */
+  elapsedMs(): number {
+    if (this.startedAt === null) return 0;
+    const end = this.completedAt ?? performance.now();
+    return Math.max(0, end - this.startedAt);
   }
 
   start(): void {
@@ -172,8 +210,15 @@ export class Game {
     this.input.beginFrame();
     if (this.won) {
       this.winT++;
-      if (this.winT === 24) this.callbacks.onWin();
+      if (this.winT === 24) this.callbacks.onWin(this.elapsedMs());
       return;
+    }
+    // Start the timer on the first frame the player moves or jumps.
+    if (
+      this.startedAt === null &&
+      (this.input.state.left || this.input.state.right || this.input.state.jump || this.input.state.down)
+    ) {
+      this.startedAt = performance.now();
     }
     stepPlayer(this.player, this.input.state, this.level.platforms, this.level.enemies, this.level.width);
     stepEnemies(this.level.enemies);
@@ -187,6 +232,7 @@ export class Game {
     if (reachedGoal(this.player, this.level.goal.x, this.level.goal.y)) {
       this.won = true;
       this.winT = 0;
+      this.completedAt = performance.now();
       sfx.win();
       stopAmbient();
     }
@@ -196,23 +242,20 @@ export class Game {
   private updateCamera(): void {
     const px = this.player.x + this.player.w / 2;
     const py = this.player.y + this.player.h / 2;
+    const { w: vw, h: vh } = this.viewWorld();
     // X look-ahead based on facing — shows more of what's in front of the player.
     // Especially helps horizontal levels (beach, car) where direction-of-travel matters.
     const lookAheadX = this.player.facing * 100;
-    const targetX = px + lookAheadX - this.viewport.w / 2;
+    const targetX = px + lookAheadX - vw / 2;
     // Y bias: zero for horizontal levels (scrollDir=0), otherwise look in scroll direction.
     const lookAheadY = this.level.scrollDir * -80;
-    const targetY = py + lookAheadY - this.viewport.h / 2;
+    const targetY = py + lookAheadY - vh / 2;
 
-    // Smooth follow
-    this.camera.x += (targetX - this.camera.x) * 0.12;
-    this.camera.y += (targetY - this.camera.y) * 0.18;
-
-    // Clamp to world
-    const maxX = Math.max(0, this.level.width - this.viewport.w);
-    this.camera.x = Math.max(0, Math.min(maxX, this.camera.x));
-    const maxY = Math.max(-200, this.level.height - this.viewport.h + 100);
-    this.camera.y = Math.max(-200, Math.min(maxY, this.camera.y));
+    // Smooth follow toward the clamped target so the camera never overshoots into empty world.
+    const clampedTargetX = this.clampCameraX(targetX);
+    const clampedTargetY = this.clampCameraY(targetY);
+    this.camera.x += (clampedTargetX - this.camera.x) * 0.12;
+    this.camera.y += (clampedTargetY - this.camera.y) * 0.18;
   }
 
   private draw(): void {
@@ -236,8 +279,10 @@ export class Game {
         break;
     }
 
-    // World transform
+    // World transform — scale up on bigger screens, then offset by the camera.
+    // Order: scale first, then translate in WORLD units.
     ctx.save();
+    ctx.scale(this.worldScale, this.worldScale);
     ctx.translate(-this.camera.x, -this.camera.y);
 
     // Platforms
@@ -375,6 +420,13 @@ export class Game {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(`${Math.round(progress * 100)}%`, goalCx, barY + barH + 8);
+
+    // Live time, only after the player moves.
+    if (this.startedAt !== null) {
+      ctx.fillStyle = 'rgba(42, 31, 26, 0.55)';
+      ctx.font = '500 11px Fredoka, system-ui, sans-serif';
+      ctx.fillText(formatTime(this.elapsedMs()), goalCx, barY + barH + 24);
+    }
 
     ctx.restore();
   }
