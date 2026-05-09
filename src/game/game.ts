@@ -334,18 +334,21 @@ export class Game {
     const raw = denom === 0 ? 1 : (curV - startV) / denom;
     const progress = Math.max(0, Math.min(1, raw));
 
-    // Bar always fills bottom→up, where the top is "100% to the goal" and bottom is "start".
+    // For descending levels (cave), the bar fills TOP→DOWN — visually mirroring the
+    // player digging deeper. Everything else fills bottom→up.
+    const fillsDown = this.level.scrollDir > 0;
     const fillColor = goalColor(this.level.map);
     const fillH = barH * progress;
     if (fillH > 0.5) {
       ctx.fillStyle = fillColor;
-      roundedRect(ctx, barX, barY + barH - fillH, barW, fillH, radius);
+      const fillY = fillsDown ? barY : barY + barH - fillH;
+      roundedRect(ctx, barX, fillY, barW, fillH, radius);
       ctx.fill();
     }
 
-    // Goal cap — circle at the top of the bar.
+    // Goal cap — at the END the player is heading toward.
     const goalCx = barX + barW / 2;
-    const goalCy = barY;
+    const goalCy = fillsDown ? barY + barH : barY;
     ctx.fillStyle = fillColor;
     ctx.beginPath();
     ctx.arc(goalCx, goalCy, 11, 0, Math.PI * 2);
@@ -356,8 +359,8 @@ export class Game {
     ctx.textBaseline = 'middle';
     ctx.fillText(goalEmoji(this.level.map), goalCx, goalCy);
 
-    // "you are here" marker
-    const youCy = barY + barH - fillH;
+    // "you are here" marker — at the leading edge of the fill.
+    const youCy = fillsDown ? barY + fillH : barY + barH - fillH;
     ctx.fillStyle = '#FFFEF8';
     ctx.strokeStyle = fillColor;
     ctx.lineWidth = 2.5;

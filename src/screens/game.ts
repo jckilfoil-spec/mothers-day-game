@@ -1,7 +1,12 @@
 import type { Screen } from '../router.js';
 import { el, mount } from '../util/dom.js';
 import { Game } from '../game/game.js';
-import { makeCaveLevel, makeMountainLevel } from '../game/levels.js';
+import {
+  makeBeachLevel,
+  makeCarLevel,
+  makeCaveLevel,
+  makeMountainLevel,
+} from '../game/levels.js';
 import { getSelectedCharacter, getSettings, setMuted } from '../state.js';
 import { setMuted as audioSetMuted, sfx, unlock } from '../audio/sounds.js';
 
@@ -20,7 +25,11 @@ export const gameScreen: Screen = (root, nav, route) => {
   }
 
   unlock();
-  const level = mapId === 'mountain' ? makeMountainLevel() : makeCaveLevel();
+  const level =
+    mapId === 'mountain' ? makeMountainLevel()
+    : mapId === 'cave' ? makeCaveLevel()
+    : mapId === 'beach' ? makeBeachLevel()
+    : makeCarLevel();
 
   const canvas = el('canvas', {}) as HTMLCanvasElement;
   const stage = el('div', { class: 'game-stage' }, [canvas]);

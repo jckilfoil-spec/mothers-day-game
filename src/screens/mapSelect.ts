@@ -31,9 +31,9 @@ export const mapSelectScreen: Screen = (root, nav) => {
   ]);
 
   const tiles: HTMLElement[] = [
-    mapTile('mountain', 'Mountain Ascent', 'Climb to the flag at the top.', () => go('mountain')),
-    mapTile('cave', 'Cave Descent', 'Find the glowing crystal below.', () => go('cave')),
-    mapTile('beach', 'Beach Run', "Avoid hot sand. Find the shark's tooth.", () => go('beach')),
+    mapTile('mountain', 'Hike the Mountain!', 'Climb to the flag at the top.', () => go('mountain')),
+    mapTile('cave', 'Go Spelunking!', 'Dig down to the glowing crystal below.', () => go('cave')),
+    mapTile('beach', 'Hunt for Sharkteeth!', 'Avoid hot sand. Find the shark tooth at the end.', () => go('beach')),
     mapTile('car', 'Drive Home', 'Dodge phones and cars. Get home to family.', () => go('car')),
   ];
 
