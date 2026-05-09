@@ -86,11 +86,13 @@ function resolvePlatform(p: PlayerState, plat: Platform): { groundedNow: boolean
   }
 }
 
-/** Resolve player against one or more enemies as solid blocks (so they can't be jumped over). */
+/** Resolve player against solid enemies (so they can't be jumped over). Non-solid enemies
+ *  like seagulls overhead are clickable but pass-through. */
 function resolveEnemyBlock(p: PlayerState, enemies: EnemyState[]): { groundedNow: boolean } {
   let grounded = false;
   for (const e of enemies) {
     if (e.defeatT > 0) continue;
+    if (!e.solid) continue;
     const platLike: Rect = { x: e.x, y: e.y, w: e.w, h: e.h };
     const { groundedNow } = resolvePlatform(p, platLike as Platform);
     if (groundedNow) grounded = true;
@@ -183,7 +185,9 @@ export function stepPlayer(
   player.animT++;
 }
 
-/** Patrol moving hazards (cars). Stationary hazards (speed=0 or undefined) are no-ops. */
+/** Patrol moving hazards (cars). Stationary hazards (speed=0 or undefined) are no-ops.
+ *  Increments colorIndex on each direction reversal so cars stay one color until they
+ *  bounce off a wall — passive visual feedback that they "turned around". */
 export function stepHazards(hazards: Hazard[]): void {
   for (const h of hazards) {
     if (!h.speed || h.speed === 0) continue;
@@ -194,9 +198,11 @@ export function stepHazards(hazards: Hazard[]): void {
     if (h.x < minX) {
       h.x = minX;
       h.dir = 1;
+      h.colorIndex = (h.colorIndex ?? 0) + 1;
     } else if (h.x + h.w > maxX) {
       h.x = maxX - h.w;
       h.dir = -1;
+      h.colorIndex = (h.colorIndex ?? 0) + 1;
     }
   }
 }

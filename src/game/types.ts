@@ -40,7 +40,9 @@ export interface EnemyState {
   hitFlash: number;
   /** Defeat puff timer (frames). 0 = alive, > 0 = defeated and animating. */
   defeatT: number;
-  variant: 'rock' | 'slime';
+  variant: 'rock' | 'slime' | 'phone' | 'seagull';
+  /** When false, the enemy is clickable but doesn't block player movement (seagulls overhead). */
+  solid: boolean;
   emoji: string;
 }
 
@@ -73,12 +75,15 @@ export interface PlayerState {
 /** A non-killable obstacle. Touching it bounces the player up and away — no damage, no death,
  *  just a comedic "ouch" with a brief invincibility window so the player can escape. */
 export interface Hazard extends Rect {
-  variant: 'hot-sand' | 'cell-phone' | 'car';
+  variant: 'hot-sand' | 'car';
   /** Patrol speed (px/frame). 0 = stationary. */
   speed?: number;
   dir?: 1 | -1;
   minX?: number;
   maxX?: number;
+  /** For cars: stable index into the color palette. Increments on each direction reversal,
+   *  so cars stay one color until they bounce off a wall. */
+  colorIndex?: number;
 }
 
 export interface LevelData {

@@ -6,28 +6,54 @@ const EMOJIS = ['😈', '😠', '😤', '🙃', '😬'];
 
 let id = 0;
 
+interface MakeEnemyOpts {
+  hp?: number;
+  /** Width override (defaults per variant). */
+  w?: number;
+  /** Height override (defaults per variant). */
+  h?: number;
+  /** Default true; pass false for hovering enemies that don't block. */
+  solid?: boolean;
+}
+
+const DEFAULTS: Record<EnemyState['variant'], { w: number; h: number; hp: number; solid: boolean }> = {
+  rock: { w: 64, h: 56, hp: 15, solid: true },
+  slime: { w: 64, h: 56, hp: 15, solid: true },
+  // Phones stand upright on the road and go down quickly to spam-tapping.
+  phone: { w: 30, h: 56, hp: 5, solid: true },
+  // Seagulls hover above the player — pass-through, fragile, fast to kill.
+  seagull: { w: 64, h: 36, hp: 4, solid: false },
+};
+
 export function makeEnemy(
   x: number,
   y: number,
-  variant: 'rock' | 'slime',
+  variant: EnemyState['variant'],
   patrol = 0,
+  opts: MakeEnemyOpts = {},
 ): EnemyState {
   id++;
+  const def = DEFAULTS[variant];
+  const w = opts.w ?? def.w;
+  const h = opts.h ?? def.h;
+  const hp = opts.hp ?? def.hp;
+  const solid = opts.solid ?? def.solid;
   return {
     id: 'e' + id,
     x,
     y,
-    w: 64,
-    h: 56,
-    hp: 15,
-    maxHp: 15,
+    w,
+    h,
+    hp,
+    maxHp: hp,
     speed: patrol > 0 ? 0.6 : 0,
     dir: 1,
     minX: x - patrol,
-    maxX: x + patrol + 64,
+    maxX: x + patrol + w,
     hitFlash: 0,
     defeatT: 0,
     variant,
+    solid,
     emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)] ?? '😈',
   };
 }
@@ -52,42 +78,32 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: EnemyState, t: numbe
 
   // Body
   if (e.variant === 'rock') {
-    // Gray rounded rock
     ctx.fillStyle = '#7D7068';
     ctx.beginPath();
     ctx.ellipse(0, 4 + wobble, bodyW, bodyH, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Highlight
     ctx.fillStyle = '#A29688';
     ctx.beginPath();
     ctx.ellipse(-8, -6 + wobble, bodyW * 0.6, bodyH * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
-  } else {
-    // Purple slime
+    drawHitFlash(ctx, 0, 4 + wobble, bodyW, bodyH, e.hitFlash);
+    drawEmojiFace(ctx, e.emoji, 0, 2 + wobble);
+  } else if (e.variant === 'slime') {
     ctx.fillStyle = '#7E5BA0';
     ctx.beginPath();
     ctx.ellipse(0, 6 + wobble, bodyW, bodyH * 0.95, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Glossy highlight
     ctx.fillStyle = '#A87BC5';
     ctx.beginPath();
     ctx.ellipse(-10, -4 + wobble, bodyW * 0.6, bodyH * 0.4, 0, 0, Math.PI * 2);
     ctx.fill();
+    drawHitFlash(ctx, 0, 4 + wobble, bodyW, bodyH, e.hitFlash);
+    drawEmojiFace(ctx, e.emoji, 0, 2 + wobble);
+  } else if (e.variant === 'phone') {
+    drawPhone(ctx, e.w, e.h, e.hitFlash, t);
+  } else if (e.variant === 'seagull') {
+    drawSeagull(ctx, e.w, e.h, e.hitFlash, e.dir, t);
   }
-
-  // Hit flash overlay
-  if (e.hitFlash > 0) {
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(0, 4 + wobble, bodyW, bodyH, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Face emoji
-  ctx.font = '28px serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(e.emoji, 0, 2 + wobble);
 
   ctx.restore();
 
@@ -122,6 +138,162 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: EnemyState, t: numbe
       ctx.fill();
     }
     ctx.restore();
+  }
+}
+
+function drawHitFlash(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  flash: number,
+): void {
+  if (flash <= 0) return;
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawEmojiFace(ctx: CanvasRenderingContext2D, emoji: string, x: number, y: number): void {
+  ctx.font = '28px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, x, y);
+}
+
+/** Vertical phone, screen aglow, hairline cracks once damaged. Local coords centered. */
+function drawPhone(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  hitFlash: number,
+  t: number,
+): void {
+  const x = -w / 2;
+  const y = -h / 2;
+  // Body
+  ctx.fillStyle = '#1A1410';
+  roundedRect(ctx, x, y, w, h, 5);
+  ctx.fill();
+  // Bezel
+  ctx.strokeStyle = '#3A3A3A';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Screen
+  const sx = x + 3;
+  const sy = y + 6;
+  const sw = w - 6;
+  const sh = h - 12;
+  const glow = 0.55 + 0.45 * Math.sin(t * 0.012);
+  ctx.fillStyle = `rgba(168, 224, 255, ${0.55 + glow * 0.3})`;
+  ctx.fillRect(sx, sy, sw, sh);
+  // App icons grid
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 2; col++) {
+      ctx.fillRect(sx + 2 + col * 6, sy + 4 + row * 8, 4, 4);
+    }
+  }
+  // Notch
+  ctx.fillStyle = '#1A1410';
+  ctx.fillRect(x + w / 2 - 3, y + 2, 6, 2);
+  // Speaker dot
+  ctx.fillRect(x + w / 2 - 1, y + 3, 2, 1);
+  // Home indicator at bottom
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillRect(x + w / 2 - 5, y + h - 4, 10, 1.5);
+  // Hit flash overlay
+  if (hitFlash > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    roundedRect(ctx, x, y, w, h, 5);
+    ctx.fill();
+  }
+}
+
+/** Top-down seagull silhouette: white body, beak in facing direction, flapping wings. */
+function drawSeagull(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  hitFlash: number,
+  dir: 1 | -1,
+  t: number,
+): void {
+  // Wing flap phase (faster than body)
+  const flap = Math.sin(t * 0.012) * 0.6;
+  // Body
+  ctx.fillStyle = '#FAFAFA';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, w * 0.32, h * 0.24, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Underbelly shadow
+  ctx.fillStyle = '#D6D6D6';
+  ctx.beginPath();
+  ctx.ellipse(0, 4, w * 0.28, h * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wings — two ellipses extending from sides; rotate by flap.
+  ctx.save();
+  ctx.translate(-w * 0.18, -2);
+  ctx.rotate(-flap);
+  ctx.fillStyle = '#FAFAFA';
+  ctx.beginPath();
+  ctx.ellipse(-w * 0.16, 0, w * 0.22, h * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#A6A6A6';
+  ctx.beginPath();
+  ctx.ellipse(-w * 0.22, 1, w * 0.14, h * 0.08, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(w * 0.18, -2);
+  ctx.rotate(flap);
+  ctx.fillStyle = '#FAFAFA';
+  ctx.beginPath();
+  ctx.ellipse(w * 0.16, 0, w * 0.22, h * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#A6A6A6';
+  ctx.beginPath();
+  ctx.ellipse(w * 0.22, 1, w * 0.14, h * 0.08, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Head + beak in facing direction
+  const facing = dir === 1 ? 1 : -1;
+  ctx.fillStyle = '#FAFAFA';
+  ctx.beginPath();
+  ctx.arc(facing * w * 0.22, -2, h * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+  // Beak (orange triangle)
+  ctx.fillStyle = '#F4A56C';
+  ctx.beginPath();
+  ctx.moveTo(facing * (w * 0.32), -2);
+  ctx.lineTo(facing * (w * 0.46), -1);
+  ctx.lineTo(facing * (w * 0.32), 2);
+  ctx.closePath();
+  ctx.fill();
+  // Eye (small dark dot)
+  ctx.fillStyle = '#1A1410';
+  ctx.beginPath();
+  ctx.arc(facing * (w * 0.26), -3, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Tiny mean eyebrow
+  ctx.strokeStyle = '#1A1410';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(facing * (w * 0.22), -6);
+  ctx.lineTo(facing * (w * 0.30), -5);
+  ctx.stroke();
+
+  // Hit flash overlay
+  if (hitFlash > 0) {
+    ctx.fillStyle = 'rgba(255,200,80,0.55)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, w * 0.5, h * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 

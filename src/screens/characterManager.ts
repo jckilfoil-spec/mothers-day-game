@@ -31,12 +31,12 @@ export const characterManagerScreen: Screen = (root, nav) => {
           nav({ name: 'title' });
         },
       }, ['‹']),
-      el('h1', {}, ['Pick a hero']),
+      el('h1', {}, ['Are you really mom?']),
       playBtn,
     ]),
     grid,
     el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
-      'Add as many as you like — Mom, Dad, Quinn, the cat, the fish. Tap a card to play with that one.',
+      "I need to be sure it's you. Pick yourself — Mom, Dad, Quinn, the cat, the fish — anyone you love.",
     ]),
   ]);
 

@@ -744,7 +744,9 @@ export function paintCellPhone(
   ctx.restore();
 }
 
-/** Distracted-driver car — colored body, windshield, wheels, headlights pointing in dir. */
+/** Distracted-driver car — colored body, windshield, wheels, headlights pointing in dir.
+ *  Color comes from `colorIndex` (mod the palette) and only changes when the car bounces
+ *  off a wall (incremented by stepHazards). Stable mid-run. */
 export function paintCar(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -752,12 +754,12 @@ export function paintCar(
   w: number,
   h: number,
   dir: 1 | -1,
+  colorIndex: number,
   t: number,
 ): void {
   ctx.save();
-  // Pick a stable color from the world position
   const palette = ['#C75D5D', '#7BA888', '#E89554', '#7E5BA0', '#5BA8B8'];
-  const color = palette[Math.floor((x + y) / 47) % palette.length] ?? '#C75D5D';
+  const color = palette[((colorIndex % palette.length) + palette.length) % palette.length] ?? '#C75D5D';
 
   // Wheels (drawn first so the body sits on them)
   const wheelR = h * 0.28;
@@ -873,4 +875,164 @@ export function paintCrystal(ctx: CanvasRenderingContext2D, x: number, y: number
   ctx.fillRect(x - 6, y - 14, 2, 6);
   ctx.fillRect(x - 8, y - 12, 6, 2);
   ctx.restore();
+}
+
+// =====================================================================================
+// Goal particle field — hearts, stars, sparkles, and tiny copies of the goal itself
+// drift up + outward from the goal point. Stateless: position is a function of (t, i).
+// =====================================================================================
+
+/** Emanate hearts/stars/sparkles + mini-goal icons upward from the goal point. */
+export function paintGoalParticles(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  map: 'mountain' | 'cave' | 'beach' | 'car',
+  t: number,
+): void {
+  const N = 18;
+  const cycle = 2600; // ms per particle through its full life
+  for (let i = 0; i < N; i++) {
+    const phase = ((t + i * (cycle / N)) % cycle) / cycle; // 0..1
+    const alpha = Math.sin(phase * Math.PI);
+    if (alpha < 0.05) continue;
+
+    // Sway in a wide arc; ramps amplitude in then narrows as it fades.
+    const sway = Math.sin((phase + i * 0.13) * Math.PI * 2);
+    const swayAmp = 28 + (i % 3) * 8;
+    const px = cx + sway * swayAmp * (1 - phase * 0.5);
+    const py = cy - 14 - phase * 110;
+
+    const sz = 5 + Math.sin(phase * Math.PI) * 3;
+
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.95;
+
+    const which = i % 4;
+    if (which === 0) {
+      paintMiniHeart(ctx, px, py, sz);
+    } else if (which === 1) {
+      paintMiniStar(ctx, px, py, sz);
+    } else if (which === 2) {
+      paintMiniSparkle(ctx, px, py, sz);
+    } else {
+      paintMiniGoal(ctx, px, py, sz, map);
+    }
+
+    ctx.restore();
+  }
+}
+
+function paintMiniHeart(ctx: CanvasRenderingContext2D, x: number, y: number, sz: number): void {
+  const r = sz * 0.55;
+  ctx.fillStyle = '#C75D5D';
+  ctx.beginPath();
+  ctx.arc(x - r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.arc(x + r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.moveTo(x - r * 1.2, y);
+  ctx.lineTo(x, y + r * 1.5);
+  ctx.lineTo(x + r * 1.2, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function paintMiniStar(ctx: CanvasRenderingContext2D, x: number, y: number, sz: number): void {
+  ctx.fillStyle = '#FBC34A';
+  ctx.beginPath();
+  for (let k = 0; k < 5; k++) {
+    const outerA = -Math.PI / 2 + (k * 2 * Math.PI) / 5;
+    const innerA = outerA + Math.PI / 5;
+    const ox = x + Math.cos(outerA) * sz;
+    const oy = y + Math.sin(outerA) * sz;
+    const ix = x + Math.cos(innerA) * sz * 0.45;
+    const iy = y + Math.sin(innerA) * sz * 0.45;
+    if (k === 0) ctx.moveTo(ox, oy);
+    else ctx.lineTo(ox, oy);
+    ctx.lineTo(ix, iy);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function paintMiniSparkle(ctx: CanvasRenderingContext2D, x: number, y: number, sz: number): void {
+  ctx.strokeStyle = '#FFFEF8';
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x - sz, y);
+  ctx.lineTo(x + sz, y);
+  ctx.moveTo(x, y - sz);
+  ctx.lineTo(x, y + sz);
+  ctx.moveTo(x - sz * 0.55, y - sz * 0.55);
+  ctx.lineTo(x + sz * 0.55, y + sz * 0.55);
+  ctx.moveTo(x - sz * 0.55, y + sz * 0.55);
+  ctx.lineTo(x + sz * 0.55, y - sz * 0.55);
+  ctx.stroke();
+  ctx.fillStyle = '#FFFEF8';
+  ctx.beginPath();
+  ctx.arc(x, y, sz * 0.32, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/** Tiny stylized version of the scene's goal — the "themed" particle. */
+function paintMiniGoal(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  sz: number,
+  map: 'mountain' | 'cave' | 'beach' | 'car',
+): void {
+  if (map === 'mountain') {
+    // Mini orange flag
+    ctx.fillStyle = '#5C3A28';
+    ctx.fillRect(x - 0.5, y - sz, 1, sz * 1.5);
+    ctx.fillStyle = '#F4A56C';
+    ctx.beginPath();
+    ctx.moveTo(x, y - sz);
+    ctx.lineTo(x + sz, y - sz * 0.5);
+    ctx.lineTo(x, y);
+    ctx.closePath();
+    ctx.fill();
+  } else if (map === 'cave') {
+    // Mini teal crystal
+    ctx.fillStyle = '#6FB5A8';
+    ctx.beginPath();
+    ctx.moveTo(x, y - sz);
+    ctx.lineTo(x + sz * 0.7, y);
+    ctx.lineTo(x, y + sz * 0.6);
+    ctx.lineTo(x - sz * 0.7, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#A8E6DC';
+    ctx.beginPath();
+    ctx.moveTo(x, y - sz);
+    ctx.lineTo(x - sz * 0.7, y);
+    ctx.lineTo(x - sz * 0.2, y);
+    ctx.closePath();
+    ctx.fill();
+  } else if (map === 'beach') {
+    // Mini white tooth
+    ctx.fillStyle = '#FFFEF8';
+    ctx.beginPath();
+    ctx.moveTo(x, y - sz);
+    ctx.lineTo(x + sz * 0.55, y + sz * 0.3);
+    ctx.lineTo(x - sz * 0.55, y + sz * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#9E8568';
+    ctx.fillRect(x - sz * 0.5, y + sz * 0.25, sz, sz * 0.18);
+  } else {
+    // Mini house
+    ctx.fillStyle = '#F4A56C';
+    ctx.fillRect(x - sz * 0.55, y - sz * 0.2, sz * 1.1, sz * 0.7);
+    ctx.fillStyle = '#5C3A28';
+    ctx.beginPath();
+    ctx.moveTo(x - sz * 0.7, y - sz * 0.2);
+    ctx.lineTo(x, y - sz * 0.85);
+    ctx.lineTo(x + sz * 0.7, y - sz * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#FBC34A';
+    ctx.fillRect(x - sz * 0.18, y, sz * 0.36, sz * 0.4);
+  }
 }

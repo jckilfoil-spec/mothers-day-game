@@ -108,13 +108,17 @@ describe('Car level', () => {
     expect(lvl.progressAxis).toBe('x');
   });
 
-  it('has both stationary phones and patrolling cars', () => {
+  it('has clickable phone enemies and patrolling car hazards', () => {
     const lvl = makeCarLevel();
-    const phones = lvl.hazards.filter((h) => h.variant === 'cell-phone');
+    const phones = lvl.enemies.filter((e) => e.variant === 'phone');
     const cars = lvl.hazards.filter((h) => h.variant === 'car');
     expect(phones.length).toBeGreaterThan(0);
     expect(cars.length).toBeGreaterThan(0);
+    // Phones should be low-HP (designed to be spam-clicked).
+    expect(phones.every((p) => p.maxHp <= 10)).toBe(true);
+    // Cars patrol and have a stable colorIndex.
     expect(cars.every((c) => (c.speed ?? 0) > 0)).toBe(true);
+    expect(cars.every((c) => c.colorIndex !== undefined)).toBe(true);
   });
 
   it('places goal (home) at the right side', () => {

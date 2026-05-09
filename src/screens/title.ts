@@ -20,9 +20,9 @@ export const titleScreen: Screen = (root, nav) => {
   }, ['Start']);
 
   const content = el('div', { class: 'title__content' }, [
-    el('p', { class: 'title__heart bounce-in' }, ['for you, with love']),
+    el('p', { class: 'title__heart bounce-in' }, ['Mom… I have to tell you something.']),
     el('h1', { class: 'title__main bounce-in' }, ['A Game for Mom']),
-    el('p', { class: 'title__sub bounce-in' }, ['A tiny adventure where you become the hero.']),
+    el('p', { class: 'title__sub bounce-in' }, ["Press Start when you're ready."]),
     startBtn,
   ]);
 

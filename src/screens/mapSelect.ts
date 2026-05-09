@@ -53,12 +53,12 @@ export const mapSelectScreen: Screen = (root, nav) => {
           nav({ name: 'characters' });
         },
       }, ['‹']),
-      el('h1', {}, ['Pick an adventure']),
+      el('h1', {}, ['Meet me at our special place.']),
       el('div', { style: 'margin-left:auto' }, [chip]),
     ]),
     el('div', { class: 'map-select' }, tiles),
     el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
-      'Four short levels. Each one is a complete little gift on its own.',
+      'I can only tell you there. Pick the one you want.',
     ]),
   ]);
 

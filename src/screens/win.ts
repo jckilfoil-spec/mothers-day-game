@@ -28,8 +28,8 @@ export const winScreen: Screen = (root, nav, route) => {
       : el('div', {
           class: 'win__face char-card__face--placeholder',
         }, ['🙂']),
-    el('p', { class: 'win__greeting' }, ["Happy Mother's Day,"]),
-    el('h1', { class: 'win__name' }, [character.name + '!']),
+    el('p', { class: 'win__greeting' }, ['We made it. I had to tell you —']),
+    el('h1', { class: 'win__name' }, [`Happy Mother's Day, ${character.name}!`]),
     elapsedMs && elapsedMs > 0
       ? el('p', { class: 'win__time' }, [
           el('span', { class: 'win__time-label' }, ['Finished in']),

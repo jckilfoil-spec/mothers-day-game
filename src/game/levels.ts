@@ -7,6 +7,7 @@
 
 import { makeEnemy } from './enemy.js';
 import type { Hazard, LevelData, Platform } from './types.js';
+// Seagull/phone variants live in the EnemyState union now; makeEnemy dispatches on variant.
 
 const VERT_W = 720;
 const VERT_H = 2400;
@@ -127,13 +128,21 @@ export function makeBeachLevel(): LevelData {
     hot(2060, 200),
   ];
 
+  // Seagulls patrol overhead — pass-through, but the player can spam-click to defeat them
+  // before they "drop one" on the run. (The dropping is currently implied 😉)
+  const enemies = [
+    makeEnemy(420, 220, 'seagull', 200),
+    makeEnemy(1180, 180, 'seagull', 240),
+    makeEnemy(1980, 240, 'seagull', 220),
+  ];
+
   return {
     map: 'beach',
     width: HORIZ_W,
     height: HORIZ_H,
     playerStart: { x: 80, y: HORIZ_FLOOR - 88 },
     platforms,
-    enemies: [],
+    enemies,
     hazards,
     goal: { x: 2700, y: HORIZ_FLOOR - 32 },
     scrollDir: 0,
@@ -141,8 +150,8 @@ export function makeBeachLevel(): LevelData {
   };
 }
 
-/** Car — horizontal traverse. Avoid dropped cell phones (stationary) and patrolling cars.
- *  Goal: home + family at the far right. */
+/** Car — horizontal traverse. Phones are spam-clickable enemies on the road; cars are
+ *  bouncy patrolling hazards you can't kill. Goal: home + family at the far right. */
 export function makeCarLevel(): LevelData {
   const platforms: Platform[] = [
     // Road (solid).
@@ -153,14 +162,14 @@ export function makeCarLevel(): LevelData {
     jumpPlat(2030, 580, 110),
   ];
 
-  const phone = (x: number): Hazard => ({
-    x,
-    y: HORIZ_FLOOR - 14,
-    w: 32,
-    h: 14,
-    variant: 'cell-phone',
-  });
+  // Phones are now click-destroyable enemies (low HP), standing upright on the road.
+  const enemies = [
+    makeEnemy(500, HORIZ_FLOOR - 56, 'phone', 0),
+    makeEnemy(1200, HORIZ_FLOOR - 56, 'phone', 0),
+    makeEnemy(1880, HORIZ_FLOOR - 56, 'phone', 0),
+  ];
 
+  let nextCarColor = 0;
   const car = (x: number, range: number, speed: number, dir: 1 | -1): Hazard => ({
     x,
     y: HORIZ_FLOOR - 50,
@@ -171,12 +180,11 @@ export function makeCarLevel(): LevelData {
     dir,
     minX: x - range,
     maxX: x + range + 110,
+    // Initial color picked stably; rotates on each wall-bounce via stepHazards.
+    colorIndex: nextCarColor++,
   });
 
   const hazards: Hazard[] = [
-    phone(500),
-    phone(1200),
-    phone(1880),
     car(360, 220, 1.6, 1),
     car(1100, 200, 1.4, -1),
     car(1820, 240, 1.8, 1),
@@ -188,7 +196,7 @@ export function makeCarLevel(): LevelData {
     height: HORIZ_H,
     playerStart: { x: 80, y: HORIZ_FLOOR - 88 },
     platforms,
-    enemies: [],
+    enemies,
     hazards,
     goal: { x: 2700, y: HORIZ_FLOOR - 60 },
     scrollDir: 0,

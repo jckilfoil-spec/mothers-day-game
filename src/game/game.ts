@@ -25,8 +25,8 @@ import {
   paintBeachScene,
   paintCar,
   paintCarScene,
+  paintGoalParticles,
   paintCaveScene,
-  paintCellPhone,
   paintCrystal,
   paintFlag,
   paintHotSand,
@@ -298,16 +298,14 @@ export class Game {
         case 'hot-sand':
           paintHotSand(ctx, hz.x, hz.y, hz.w, hz.h, t);
           break;
-        case 'cell-phone':
-          paintCellPhone(ctx, hz.x, hz.y, hz.w, hz.h, t);
-          break;
         case 'car':
-          paintCar(ctx, hz.x, hz.y, hz.w, hz.h, hz.dir ?? 1, t);
+          paintCar(ctx, hz.x, hz.y, hz.w, hz.h, hz.dir ?? 1, hz.colorIndex ?? 0, t);
           break;
       }
     }
 
-    // Goal
+    // Goal — particles emanate first (so the goal sprite paints over the source point cleanly).
+    paintGoalParticles(ctx, this.level.goal.x, this.level.goal.y, this.level.map, t);
     switch (this.level.map) {
       case 'mountain':
         paintFlag(ctx, this.level.goal.x, this.level.goal.y, t);

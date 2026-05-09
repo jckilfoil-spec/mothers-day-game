@@ -310,9 +310,56 @@ describe('hazards', () => {
   });
 
   it('stationary hazards (no speed) do not move', () => {
-    const phone: Hazard = { x: 50, y: 100, w: 30, h: 14, variant: 'cell-phone' };
-    stepHazards([phone]);
-    expect(phone.x).toBe(50);
+    const sand: Hazard = { x: 50, y: 100, w: 80, h: 14, variant: 'hot-sand' };
+    stepHazards([sand]);
+    expect(sand.x).toBe(50);
+  });
+
+  it('cars increment colorIndex on each direction reversal', () => {
+    const car: Hazard = {
+      x: 200,
+      y: 400,
+      w: 100,
+      h: 50,
+      variant: 'car',
+      speed: 5,
+      dir: 1,
+      minX: 100,
+      maxX: 600,
+      colorIndex: 0,
+    };
+    // Walk to the right wall and back; should bounce twice → colorIndex jumps by 2.
+    for (let i = 0; i < 600; i++) stepHazards([car]);
+    expect(car.colorIndex).toBeGreaterThan(0);
+  });
+});
+
+describe('non-solid enemies (seagulls) do not block the player', () => {
+  it('lets the player pass through a seagull horizontally', () => {
+    const p = makePlayer(0, 100);
+    const seagull = {
+      id: 'sg',
+      x: 50,
+      y: 100,
+      w: 64,
+      h: 36,
+      hp: 4,
+      maxHp: 4,
+      speed: 0,
+      dir: 1 as const,
+      minX: 0,
+      maxX: 200,
+      hitFlash: 0,
+      defeatT: 0,
+      variant: 'seagull' as const,
+      solid: false,
+      emoji: '😈',
+    };
+    const right = noInput();
+    right.right = true;
+    for (let i = 0; i < 30; i++) stepPlayer(p, right, [], [seagull], 1000);
+    // Player walked through, x is well past where seagull started.
+    expect(p.x).toBeGreaterThan(seagull.x + seagull.w);
   });
 });
 
