@@ -40,7 +40,7 @@ import type { LevelData, PlayerState } from './types.js';
 import { sfx, stopAmbient } from '../audio/sounds.js';
 import { loadImage } from '../util/face.js';
 import { formatTime } from '../util/time.js';
-import { getSettings } from '../state.js';
+import { deleteCharacter, getCharacter, getSettings, loseLife } from '../state.js';
 
 function clamp(min: number, max: number, v: number): number {
   return Math.max(min, Math.min(max, v));
@@ -51,10 +51,14 @@ export interface GameOpts {
   /** Cropped face data URL or null. */
   faceImage: string | null;
   characterName: string;
+  characterId: string;
 }
 
 export interface GameCallbacks {
   onWin(elapsedMs: number): void;
+  /** Called when the active character has lost all their lives in death mode and has
+   *  been deleted from state. The host should navigate to character manager. */
+  onCharacterLost?(): void;
 }
 
 export class Game {
@@ -95,6 +99,17 @@ export class Game {
   /** Wall-clock ms when pause started (used to credit the timer back on resume). */
   private pausedAt: number | null = null;
 
+  // ---- Death mode ----
+  private characterId: string;
+  /** Maximum HP per life when death mode is on. */
+  private readonly maxHp = 5;
+  /** Current HP. Only used while settings.deathMode is true. */
+  private hp = 5;
+  /** Death animation counter (frames). 0 = alive. > 0 = animating, frozen. */
+  private dyingT = 0;
+  /** Cached current lives (read from character record on init / after death). */
+  private livesLeft = 3;
+
   constructor(canvas: HTMLCanvasElement, opts: GameOpts, callbacks: GameCallbacks) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -103,6 +118,10 @@ export class Game {
     this.level = opts.level;
     this.player = makePlayer(opts.level.playerStart.x, opts.level.playerStart.y);
     this.callbacks = callbacks;
+    this.characterId = opts.characterId;
+    // Pull current lives from the character record; default to 3 if unset.
+    const c = getCharacter(this.characterId);
+    this.livesLeft = c?.livesLeft ?? 3;
 
     this.input = new Input(canvas, (cx, cy) => this.handleClick(cx, cy));
 
@@ -211,6 +230,36 @@ export class Game {
     this.resize();
   }
 
+  /** Begin the death animation. After 60 frames, handleLifeLost resolves it. */
+  private startDying(): void {
+    if (this.dyingT > 0) return;
+    this.dyingT = 1;
+    sfx.defeat();
+  }
+
+  /** Apply the consequences of a death: decrement lives in storage. If the character is
+   *  out of lives, delete it and notify; otherwise, respawn at the level start. */
+  private handleLifeLost(): void {
+    this.dyingT = 0;
+    const remaining = loseLife(this.characterId);
+    this.livesLeft = remaining;
+    if (remaining <= 0) {
+      // Character is gone forever.
+      deleteCharacter(this.characterId);
+      this.callbacks.onCharacterLost?.();
+      return;
+    }
+    // Respawn at start with full HP and a brief invincibility window.
+    this.player.x = this.level.playerStart.x;
+    this.player.y = this.level.playerStart.y;
+    this.player.prevY = this.player.y;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.player.hurtT = 60;
+    this.hp = this.maxHp;
+    this.snapCameraToPlayer();
+  }
+
   /** Freeze the simulation. The render loop continues so the frozen frame stays visible. */
   pause(): void {
     if (this.paused) return;
@@ -260,6 +309,13 @@ export class Game {
       if (this.winT === 24) this.callbacks.onWin(this.elapsedMs());
       return;
     }
+    // Death animation freezes input and physics until it resolves into either a
+    // respawn or a character deletion.
+    if (this.dyingT > 0) {
+      this.dyingT++;
+      if (this.dyingT === 60) this.handleLifeLost();
+      return;
+    }
     // Start the timer on the first frame the player moves or jumps.
     if (
       this.startedAt === null &&
@@ -301,6 +357,10 @@ export class Game {
     if (bounced) {
       if (bounced.variant === 'car') sfx.honk();
       else sfx.ouch();
+      if (getSettings().deathMode) {
+        this.hp = Math.max(0, this.hp - 1);
+        if (this.hp === 0) this.startDying();
+      }
     }
     respawnIfFell(this.player, this.level.platforms, this.level.height);
     if (reachedGoal(this.player, this.level.goal.x, this.level.goal.y)) {
@@ -415,12 +475,66 @@ export class Game {
     // Progress bar (screen-space, on top of the world)
     this.drawProgressBar();
 
+    // Death-mode HUD: hearts + lives count, top-center.
+    if (getSettings().deathMode) this.drawDeathModeHud();
+
+    // Death animation overlay — red wash that ramps up while dying.
+    if (this.dyingT > 0) {
+      const k = Math.min(1, this.dyingT / 60);
+      ctx.fillStyle = `rgba(199, 93, 93, ${k * 0.55})`;
+      ctx.fillRect(0, 0, w, h);
+      // "Ouch!" label
+      ctx.fillStyle = '#FFFEF8';
+      ctx.font = `bold ${Math.floor(48 * (0.6 + k * 0.6))}px Fredoka, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 12;
+      const livesAfter = Math.max(0, this.livesLeft - 1);
+      const msg = livesAfter === 0 ? 'gone… make a new hero' : `ouch! ${livesAfter} ${livesAfter === 1 ? 'life' : 'lives'} left`;
+      ctx.fillText(msg, w / 2, h / 2);
+      ctx.shadowBlur = 0;
+    }
+
     // Win overlay (fade to white)
     if (this.won) {
       const k = Math.min(1, this.winT / 24);
       ctx.fillStyle = `rgba(255,254,248,${k})`;
       ctx.fillRect(0, 0, w, h);
     }
+  }
+
+  /** Hearts (current HP) + lives count, top-center. Only called when deathMode is on. */
+  private drawDeathModeHud(): void {
+    const { ctx } = this;
+    const { w } = this.viewport;
+    const cx = w / 2;
+    const baseY = 26;
+    ctx.save();
+    // Hearts row
+    const heartW = 22;
+    const heartGap = 4;
+    const totalW = this.maxHp * heartW + (this.maxHp - 1) * heartGap;
+    const startX = cx - totalW / 2;
+    for (let i = 0; i < this.maxHp; i++) {
+      const x = startX + i * (heartW + heartGap) + heartW / 2;
+      const filled = i < this.hp;
+      drawHeart(ctx, x, baseY + 8, 9, filled);
+    }
+    // Lives below — small "Lives × N"
+    ctx.font = '600 13px Fredoka, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(42, 31, 26, 0.85)';
+    const label = `Lives × ${this.livesLeft}`;
+    // soft white background pill
+    const lbW = ctx.measureText(label).width + 18;
+    ctx.fillStyle = 'rgba(255, 254, 248, 0.85)';
+    roundedRect(ctx, cx - lbW / 2, baseY + 22, lbW, 18, 9);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(42, 31, 26, 0.9)';
+    ctx.fillText(label, cx, baseY + 24);
+    ctx.restore();
   }
 
   /** Vertical "how close to the goal" bar pinned to the right side of the viewport.
@@ -508,6 +622,30 @@ export class Game {
 
     ctx.restore();
   }
+}
+
+function drawHeart(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  filled: boolean,
+): void {
+  const r = size * 0.55;
+  ctx.save();
+  ctx.fillStyle = filled ? '#C75D5D' : 'rgba(199, 93, 93, 0.18)';
+  ctx.strokeStyle = '#C75D5D';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x - r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.arc(x + r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.moveTo(x - r * 1.2, y);
+  ctx.lineTo(x, y + r * 1.5);
+  ctx.lineTo(x + r * 1.2, y);
+  ctx.closePath();
+  ctx.fill();
+  if (!filled) ctx.stroke();
+  ctx.restore();
 }
 
 function goalColor(map: string): string {

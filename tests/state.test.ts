@@ -7,8 +7,12 @@ import {
   getCharacters,
   getSelectedCharacter,
   getSettings,
+  loseLife,
+  resetLives,
   selectCharacter,
+  setDeathMode,
   setMuted,
+  setZoom,
   updateCharacter,
 } from '../src/state.js';
 
@@ -98,5 +102,38 @@ describe('state CRUD', () => {
     addCharacter({ name: 'A', faceImage: null });
     selectCharacter(null);
     expect(getSelectedCharacter()).toBeNull();
+  });
+
+  it('new characters start with 3 lives (used by death mode)', () => {
+    const c = addCharacter({ name: 'A', faceImage: null });
+    expect(c.livesLeft).toBe(3);
+  });
+
+  it('loseLife decrements, clamps to 0', () => {
+    const c = addCharacter({ name: 'A', faceImage: null });
+    expect(loseLife(c.id)).toBe(2);
+    expect(loseLife(c.id)).toBe(1);
+    expect(loseLife(c.id)).toBe(0);
+    expect(loseLife(c.id)).toBe(0);
+    expect(getCharacter(c.id)?.livesLeft).toBe(0);
+  });
+
+  it('resetLives restores to 3', () => {
+    const c = addCharacter({ name: 'A', faceImage: null });
+    loseLife(c.id);
+    loseLife(c.id);
+    resetLives(c.id);
+    expect(getCharacter(c.id)?.livesLeft).toBe(3);
+  });
+
+  it('persists zoom + deathMode', () => {
+    setZoom(1.2);
+    setDeathMode(true);
+    expect(getSettings().zoom).toBe(1.2);
+    expect(getSettings().deathMode).toBe(true);
+    setZoom(0.1); // out of range, clamped to 0.5
+    expect(getSettings().zoom).toBe(0.5);
+    setZoom(99); // clamped to 2.0
+    expect(getSettings().zoom).toBe(2);
   });
 });

@@ -115,10 +115,17 @@ export const gameScreen: Screen = (root, nav, route) => {
       level,
       faceImage: character.faceImage,
       characterName: character.name,
+      characterId: character.id,
     },
     {
       onWin: (elapsedMs) => {
         nav({ name: 'win', map: mapId, elapsedMs });
+      },
+      onCharacterLost: () => {
+        // Death-mode: lost all 3 lives. The character has already been deleted
+        // from state by Game; just ferry the user back to the picker.
+        game.destroy();
+        nav({ name: 'characters' });
       },
     },
   );
