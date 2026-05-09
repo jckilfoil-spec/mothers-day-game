@@ -31,12 +31,12 @@ export const characterManagerScreen: Screen = (root, nav) => {
           nav({ name: 'title' });
         },
       }, ['‹']),
-      el('h1', {}, ['Are you really mom?']),
+      el('h1', {}, ['Are you mom?']),
       playBtn,
     ]),
     grid,
     el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
-      "I need to be sure it's you. Pick yourself — Mom, Dad, Quinn, the cat, the fish — anyone you love.",
+      'Who are you? ...',
     ]),
   ]);
 
