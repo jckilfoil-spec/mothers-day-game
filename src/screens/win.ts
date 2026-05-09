@@ -5,6 +5,12 @@ import { Confetti } from '../util/confetti.js';
 import { sfx } from '../audio/sounds.js';
 import { formatTime } from '../util/time.js';
 
+const SHARE_URL = 'https://jckilfoil-spec.github.io/mothers-day-game/';
+const SHARE_TITLE = "Happy Mother's Day! 💌";
+const SHARE_TEXT = "Happy Mother's Day! 💌 Made you something — check it out:";
+const COPIED_DURATION_MS = 2000;
+const COPY_LABEL = '🔗 Copy Link';
+
 /** Win screen with confetti, big greeting, custom message, and four follow-up buttons. */
 export const winScreen: Screen = (root, nav, route) => {
   const map = route.name === 'win' ? route.map : 'mountain';
@@ -17,6 +23,48 @@ export const winScreen: Screen = (root, nav, route) => {
 
   const confettiCanvas = el('canvas', {}) as HTMLCanvasElement;
   const confettiWrap = el('div', { class: 'win__confetti' }, [confettiCanvas]);
+
+  // Share row — Copy Link is always present; native Share only if the API exists.
+  let copyResetTimer = 0;
+  const copyBtn = el('button', {
+    class: 'win__share-btn win__share-btn--primary',
+    type: 'button',
+    onclick: async () => {
+      sfx.click();
+      try {
+        await navigator.clipboard.writeText(SHARE_URL);
+      } catch {
+        // Non-HTTPS, denied permission, or no Clipboard API — fall back to a prompt.
+        window.prompt('Copy this link:', SHARE_URL);
+        return;
+      }
+      copyBtn.textContent = '✓ Copied!';
+      copyBtn.classList.add('win__share-btn--copied');
+      window.clearTimeout(copyResetTimer);
+      copyResetTimer = window.setTimeout(() => {
+        copyBtn.textContent = COPY_LABEL;
+        copyBtn.classList.remove('win__share-btn--copied');
+      }, COPIED_DURATION_MS);
+    },
+  }, [COPY_LABEL]);
+  const hasNativeShare = typeof navigator !== 'undefined' && 'share' in navigator;
+  const shareRow = el('div', { class: 'win__share' }, [
+    copyBtn,
+    hasNativeShare
+      ? el('button', {
+          class: 'win__share-btn win__share-btn--secondary',
+          type: 'button',
+          onclick: async () => {
+            sfx.click();
+            try {
+              await navigator.share({ title: SHARE_TITLE, text: SHARE_TEXT, url: SHARE_URL });
+            } catch {
+              // User canceled — no-op. Don't surface AbortError.
+            }
+          },
+        }, ['📤 Share'])
+      : null,
+  ]);
 
   const card = el('div', { class: 'win__card' }, [
     character.faceImage
@@ -37,6 +85,7 @@ export const winScreen: Screen = (root, nav, route) => {
         ])
       : null,
     el('p', { class: 'win__msg' }, [character.customMessage]),
+    shareRow,
     el('p', { class: 'win__hint' }, ['Take a beat. Then —']),
     el('div', { class: 'win__buttons' }, [
       el('button', {
@@ -85,6 +134,7 @@ export const winScreen: Screen = (root, nav, route) => {
   return () => {
     confetti.destroy();
     window.clearInterval(rainTimer);
+    window.clearTimeout(copyResetTimer);
     window.removeEventListener('resize', sizeConfetti);
   };
 };

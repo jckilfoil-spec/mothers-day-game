@@ -16,6 +16,9 @@ const router = new Router((route, nav): Cleanup => {
 });
 
 function mountRoute(host: HTMLElement, route: Route, nav: (r: Route) => void): Cleanup {
+  // Hide the floating Feedback button during gameplay so it doesn't sit on top
+  // of the canvas HUD. CSS rule: body.gameplay-active .feedback-btn { display: none }.
+  document.body.classList.toggle('gameplay-active', route.name === 'game');
   switch (route.name) {
     case 'title':
       return titleScreen(host, nav, route);

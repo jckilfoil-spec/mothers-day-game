@@ -680,14 +680,24 @@ function drawHeart(
   size: number,
   filled: boolean,
 ): void {
+  // See paintMiniHeart in render.ts for why each shape is filled separately —
+  // single-path version leaves the lobes-meet-triangle overlap unfilled.
   const r = size * 0.55;
   ctx.save();
   ctx.fillStyle = filled ? '#C75D5D' : 'rgba(199, 93, 93, 0.18)';
   ctx.strokeStyle = '#C75D5D';
   ctx.lineWidth = 1.5;
+  // Lobes
   ctx.beginPath();
   ctx.arc(x - r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.fill();
+  if (!filled) ctx.stroke();
+  ctx.beginPath();
   ctx.arc(x + r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.fill();
+  if (!filled) ctx.stroke();
+  // Triangle bottom
+  ctx.beginPath();
   ctx.moveTo(x - r * 1.2, y);
   ctx.lineTo(x, y + r * 1.5);
   ctx.lineTo(x + r * 1.2, y);

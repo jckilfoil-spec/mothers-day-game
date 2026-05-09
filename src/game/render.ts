@@ -964,11 +964,20 @@ export function paintGoalParticles(
 }
 
 function paintMiniHeart(ctx: CanvasRenderingContext2D, x: number, y: number, sz: number): void {
+  // Each sub-shape gets its own beginPath + fill. If you draw the two arcs and the
+  // triangle in a single path, the triangle's clockwise winding (in canvas Y-down
+  // coords) cancels the arcs' counter-clockwise winding inside their overlap, and
+  // the nonzero fill rule leaves the lobes-meet-triangle area HOLLOW — the heart
+  // reads as an outlined skull against light backgrounds. Keep these separate.
   const r = sz * 0.55;
   ctx.fillStyle = '#C75D5D';
   ctx.beginPath();
   ctx.arc(x - r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
   ctx.arc(x + r * 0.55, y - r * 0.2, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
   ctx.moveTo(x - r * 1.2, y);
   ctx.lineTo(x, y + r * 1.5);
   ctx.lineTo(x + r * 1.2, y);

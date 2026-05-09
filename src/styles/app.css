@@ -134,6 +134,53 @@ img {
   transform: none;
 }
 
+/* ---------- Feedback floating button ----------
+   Persistent across all non-gameplay screens. main.ts toggles
+   body.gameplay-active when the game screen mounts; this hides the
+   button during play so it doesn't sit on top of the canvas HUD. */
+.feedback-btn {
+  position: fixed;
+  bottom: var(--s-4);
+  right: var(--s-4);
+  z-index: 9999;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--c-primary);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.95;
+  box-shadow: 0 4px 12px rgba(42, 31, 26, 0.18);
+  transition: transform 0.15s var(--ease-out), opacity 0.15s var(--ease-out), background 0.15s var(--ease-out);
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+@media (hover: hover) and (pointer: fine) {
+  .feedback-btn:hover {
+    transform: scale(1.05);
+    opacity: 1;
+    background: var(--c-primary-hover);
+  }
+}
+.feedback-btn:focus-visible {
+  outline: 3px solid var(--c-text);
+  outline-offset: 3px;
+  opacity: 1;
+}
+body.gameplay-active .feedback-btn { display: none; }
+@media (max-width: 600px) {
+  .feedback-btn {
+    bottom: var(--s-3);
+    right: var(--s-3);
+    font-size: 0.85rem;
+    padding: 9px 14px;
+  }
+}
+
 /* ---------- Layouts ---------- */
 .screen {
   flex: 1;
@@ -1221,6 +1268,54 @@ img {
   gap: var(--s-3);
   flex-wrap: wrap;
   justify-content: center;
+}
+
+/* ---------- Win share row ----------
+   Sits between the custom message and the "Take a beat" hint. Smaller pill
+   buttons so they read as a secondary action under the gift content but still
+   stand out from the gameplay-loop buttons below. */
+.win__share {
+  display: flex;
+  gap: var(--s-3);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 0 var(--s-5);
+}
+.win__share-btn {
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  min-height: 44px;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: transform 0.15s var(--ease-out), background 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+.win__share-btn--primary {
+  background: var(--c-primary);
+  color: #fff;
+  box-shadow: 0 3px 0 rgba(232, 149, 84, 0.55), 0 4px 10px rgba(42, 31, 26, 0.14);
+}
+.win__share-btn--secondary {
+  background: var(--c-card);
+  color: var(--c-primary);
+  border: 2px solid var(--c-primary);
+}
+.win__share-btn--copied {
+  background: var(--c-success);
+  color: #fff;
+}
+@media (hover: hover) and (pointer: fine) {
+  .win__share-btn:hover { transform: translateY(-2px); }
+  .win__share-btn--primary:hover { background: var(--c-primary-hover); }
+  .win__share-btn--secondary:hover { background: var(--c-secondary-bg); }
+}
+.win__share-btn:focus-visible {
+  outline: 3px solid var(--c-text);
+  outline-offset: 3px;
 }
 
 /* ---------- Helpers ---------- */
