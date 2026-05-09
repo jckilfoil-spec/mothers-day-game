@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Mobile audit — A Game for Mom</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: #2a1f1a;
+      color: #fffef8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px;
+    }
+    header { max-width: 1200px; margin: 0 auto 12px; }
+    h1 { font-size: 18px; margin: 0 0 6px; font-weight: 600; }
+    p { font-size: 13px; opacity: 0.75; margin: 0 0 12px; max-width: 720px; line-height: 1.5; }
+    .toolbar {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .toolbar button {
+      background: #f4a56c; color: #2a1f1a;
+      border: none; border-radius: 999px;
+      padding: 6px 14px; font-size: 13px; font-weight: 600;
+      cursor: pointer;
+    }
+    .toolbar button:hover { background: #e89554; }
+    .row {
+      display: flex; gap: 16px;
+      overflow-x: auto;
+      padding-bottom: 24px;
+      scroll-snap-type: x proximity;
+    }
+    .frame {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+    }
+    .frame__label {
+      font-size: 12px; opacity: 0.85;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .frame__label .px { opacity: 0.55; }
+    .frame iframe {
+      display: block;
+      border: 4px solid #1a1612;
+      border-radius: 22px;
+      background: #fbefd9;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+    }
+    @media (max-width: 720px) {
+      /* On a real phone, stack vertically — defeats the side-by-side purpose
+         but lets you scroll the page itself instead of horizontally inside it. */
+      .row { flex-direction: column; overflow-x: visible; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mobile audit</h1>
+    <p>
+      Each iframe loads the live app at a fixed device width. Navigate inside any frame
+      independently. <strong>Reload all</strong> resets every iframe to the title screen
+      after you've made a CSS change. On a real phone, frames stack vertically so you can
+      scroll the page itself.
+    </p>
+    <div class="toolbar">
+      <button id="reload-all">Reload all</button>
+      <button id="goto-characters">Go to: characters</button>
+      <button id="goto-mapselect">Go to: mapSelect (needs a hero first)</button>
+    </div>
+  </header>
+  <div class="row" id="row"></div>
+  <script>
+    const sizes = [
+      { w: 320, h: 568, label: 'iPhone SE 1' },
+      { w: 360, h: 640, label: 'Galaxy small' },
+      { w: 375, h: 667, label: 'iPhone SE 2/3, mini' },
+      { w: 390, h: 844, label: 'iPhone 13/14' },
+      { w: 414, h: 896, label: 'iPhone XR/11' },
+    ];
+    const row = document.getElementById('row');
+    const frames = [];
+    for (const s of sizes) {
+      const wrap = document.createElement('div');
+      wrap.className = 'frame';
+      const label = document.createElement('div');
+      label.className = 'frame__label';
+      label.innerHTML = `${s.label} <span class="px">${s.w}×${s.h}</span>`;
+      const iframe = document.createElement('iframe');
+      iframe.src = './';
+      iframe.width = String(s.w);
+      iframe.height = String(s.h);
+      // Prevent iOS auto-zoom on focus inside iframes
+      iframe.setAttribute('scrolling', 'auto');
+      wrap.appendChild(label);
+      wrap.appendChild(iframe);
+      row.appendChild(wrap);
+      frames.push(iframe);
+    }
+    document.getElementById('reload-all').addEventListener('click', () => {
+      for (const f of frames) f.src = './';
+    });
+    document.getElementById('goto-characters').addEventListener('click', () => {
+      // The router is in-memory only — easiest "deep link" is a fresh load that
+      // immediately clicks Start. Reload first, then click after onload.
+      for (const f of frames) {
+        f.src = './';
+        f.addEventListener('load', () => {
+          try {
+            const doc = f.contentDocument;
+            const start = doc && doc.querySelector('.title .btn');
+            if (start) start.click();
+          } catch { /* same-origin only; will work on the deployed site */ }
+        }, { once: true });
+      }
+    });
+    document.getElementById('goto-mapselect').addEventListener('click', () => {
+      // No deep-link API yet — mash the buttons after load.
+      for (const f of frames) {
+        f.src = './';
+        let step = 0;
+        const advance = () => {
+          try {
+            const doc = f.contentDocument;
+            if (!doc) return;
+            if (step === 0) {
+              const start = doc.querySelector('.title .btn');
+              if (start) { start.click(); step = 1; setTimeout(advance, 120); return; }
+            }
+            if (step === 1) {
+              const play = doc.querySelector('.screen__primary');
+              if (play && play.style.display !== 'none') { play.click(); step = 2; }
+            }
+          } catch { /* ignore cross-origin */ }
+        };
+        f.addEventListener('load', () => setTimeout(advance, 120), { once: true });
+      }
+    });
+  </script>
+</body>
+</html>

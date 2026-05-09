@@ -140,8 +140,10 @@ img {
    button during play so it doesn't sit on top of the canvas HUD. */
 .feedback-btn {
   position: fixed;
-  bottom: var(--s-4);
-  right: var(--s-4);
+  /* env() respects iPhone home-indicator + landscape notch so the FAB is never
+     under the gesture area. Falls back to var(--s-4) on browsers without env(). */
+  bottom: max(var(--s-4), env(safe-area-inset-bottom));
+  right: max(var(--s-4), env(safe-area-inset-right));
   z-index: 9999;
   padding: 10px 18px;
   border: none;
@@ -186,7 +188,12 @@ body.gameplay-active .feedback-btn { display: none; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: var(--s-5);
+  /* Padding scales down on narrow phones: 12px sides @ 320, 24px @ 600+. */
+  padding: clamp(var(--s-3), 4vw, var(--s-5));
+  /* Reserve room at the bottom for the floating Feedback FAB (~50px tall +
+     16px gutter). Without this, the bottom-most card on the characters /
+     mapSelect grid would scroll under the button forever. */
+  padding-bottom: calc(clamp(var(--s-3), 4vw, var(--s-5)) + 64px);
   max-width: 1100px;
   margin: 0 auto;
   width: 100%;
@@ -195,6 +202,9 @@ body.gameplay-active .feedback-btn { display: none; }
 .screen__header {
   display: flex;
   align-items: center;
+  /* Wrap below ~480px so a long h1 + back button + sticky action don't push
+     each other off-screen. The right-aligned items drop to a second row. */
+  flex-wrap: wrap;
   gap: var(--s-3);
   margin-bottom: var(--s-5);
 }
@@ -214,8 +224,14 @@ body.gameplay-active .feedback-btn { display: none; }
 
 .screen__header h1 {
   margin: 0;
-  font-size: 2rem;
+  /* Was a flat 2rem (32px) — overflowed sticky headers below ~390px when paired
+     with a long character name in the Play CTA. Now scales 1.3rem→2rem. */
+  font-size: clamp(1.3rem, 5vw, 2rem);
   font-weight: 600;
+  /* Allow the heading to shrink below its intrinsic content width so it can
+     wrap inside its row instead of pushing siblings off-screen. */
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .screen__primary {
@@ -322,7 +338,7 @@ body.gameplay-active .feedback-btn { display: none; }
 .char-card {
   background: var(--c-card);
   border-radius: var(--r-lg);
-  padding: var(--s-5);
+  padding: clamp(var(--s-3), 4vw, var(--s-5));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -359,8 +375,9 @@ body.gameplay-active .feedback-btn { display: none; }
 }
 
 .char-card__face {
-  width: 120px;
-  height: 120px;
+  /* Scales 84px @ 320 → 120px @ 545+. Kept square via paired clamp on height. */
+  width: clamp(84px, 22vw, 120px);
+  height: clamp(84px, 22vw, 120px);
   border-radius: 50%;
   background: var(--c-secondary-bg);
   border: 3px solid var(--c-card);
@@ -416,7 +433,8 @@ body.gameplay-active .feedback-btn { display: none; }
 .char-card--add {
   border: 3px dashed var(--c-text-muted);
   background: rgba(255, 254, 248, 0.5);
-  min-height: 240px;
+  /* Was 240px flat — too tall on small phones. Scales 160 → 240. */
+  min-height: clamp(160px, 30vw, 240px);
   justify-content: center;
 }
 
@@ -474,7 +492,7 @@ body.gameplay-active .feedback-btn { display: none; }
 .editor__step {
   background: var(--c-card);
   border-radius: var(--r-xl);
-  padding: var(--s-6);
+  padding: clamp(var(--s-4), 5vw, var(--s-6));
   box-shadow: var(--shadow-card);
 }
 
@@ -486,7 +504,8 @@ body.gameplay-active .feedback-btn { display: none; }
 .upload-drop {
   border: 3px dashed var(--c-text-muted);
   border-radius: var(--r-lg);
-  padding: var(--s-8) var(--s-5);
+  /* Was 64px top/bottom — ate ~200px vertical on small phones. Scales 19→64. */
+  padding: clamp(var(--s-4), 6vw, var(--s-8)) clamp(var(--s-3), 4vw, var(--s-5));
   text-align: center;
   transition: border-color 120ms ease, background 120ms ease;
   cursor: pointer;
@@ -859,7 +878,9 @@ body.gameplay-active .feedback-btn { display: none; }
 }
 
 .map-tile__art {
-  height: 220px;
+  /* Tile art height tied to viewport height (vh) so 4 stacked tiles don't
+     turn the map-select into a 1200px scroll on a 568px-tall phone. */
+  height: clamp(140px, 28vh, 220px);
   position: relative;
   overflow: hidden;
 }
@@ -1036,7 +1057,7 @@ body.gameplay-active .feedback-btn { display: none; }
 
 .controls-banner {
   position: fixed;
-  bottom: 32px;
+  bottom: max(32px, calc(env(safe-area-inset-bottom) + 16px));
   left: 50%;
   transform: translateX(-50%);
   background: rgba(255, 254, 248, 0.94);
@@ -1117,13 +1138,13 @@ body.gameplay-active .feedback-btn { display: none; }
 
 .touch-controls {
   position: fixed;
-  bottom: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   z-index: 70;
   display: none;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 max(20px, env(safe-area-inset-left)) 0 max(20px, env(safe-area-inset-right));
   pointer-events: none;
 }
 
@@ -1192,7 +1213,9 @@ body.gameplay-active .feedback-btn { display: none; }
   z-index: 1;
   background: var(--c-card);
   border-radius: var(--r-xl);
-  padding: var(--s-7) var(--s-6);
+  /* Was 48 top/bottom × 32 sides flat. Scales so a 320px phone gets 19×13
+     instead of overflowing its viewport on the stacked content. */
+  padding: clamp(var(--s-4), 6vw, var(--s-7)) clamp(var(--s-3), 4vw, var(--s-6));
   box-shadow: 0 30px 80px rgba(42, 31, 26, 0.25);
   max-width: 540px;
   width: 100%;
@@ -1252,8 +1275,10 @@ body.gameplay-active .feedback-btn { display: none; }
 }
 
 .win__face {
-  width: 120px;
-  height: 120px;
+  /* Matches .char-card__face scale to avoid a tiny phone screen being eaten
+     by a 120px circle when the card already has 6 stacked elements below it. */
+  width: clamp(84px, 22vw, 120px);
+  height: clamp(84px, 22vw, 120px);
   border-radius: 50%;
   margin: 0 auto var(--s-4);
   background: var(--c-secondary-bg);
