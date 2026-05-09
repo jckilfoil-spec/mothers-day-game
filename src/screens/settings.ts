@@ -13,13 +13,21 @@ import {
   setDeathMode,
   getSelectedCharacter,
   resetLives,
+  getCharacters,
+  selectCharacter,
 } from '../state.js';
 import { sfx, setMuted as audioSetMuted } from '../audio/sounds.js';
 
 export interface SettingsOpts {
   /** Called whenever the user changes a setting that the running game cares about
-   *  (zoom). Game uses this to re-apply scale immediately. */
+   *  (zoom, death mode). Game uses this to re-apply scale immediately. */
   onSettingsChange?: () => void;
+  /** Called when the user picks a different character. Host should refresh the
+   *  in-game face + chip; the run continues uninterrupted. */
+  onSwitchCharacter?: () => void;
+  /** Called when the user picks "Create new". Host should destroy the game and
+   *  navigate to the character editor. The current run is forfeit. */
+  onCreateNewCharacter?: () => void;
   /** Called when the user picks "Quit to menu". */
   onQuit: () => void;
   /** Called whenever the modal closes (any reason). */
@@ -98,6 +106,51 @@ export function openSettings(opts: SettingsOpts): void {
             render();
           },
         }, [s.muted ? 'Off' : 'On']),
+      ]),
+    );
+
+    // ---- Character switcher ----
+    const allChars = getCharacters();
+    const characterPicks = el('div', { class: 'settings-row__characters' });
+    for (const c of allChars) {
+      const isActive = character?.id === c.id;
+      const tile = el('button', {
+        class: 'settings-char-pick' + (isActive ? ' is-selected' : ''),
+        title: isActive ? `Playing as ${c.name}` : `Switch to ${c.name}`,
+        onclick: () => {
+          if (isActive) return;
+          sfx.click();
+          selectCharacter(c.id);
+          opts.onSwitchCharacter?.();
+          render();
+        },
+      }, [
+        c.faceImage
+          ? el('img', { src: c.faceImage, alt: c.name })
+          : el('span', { class: 'settings-char-pick__placeholder' }, ['🙂']),
+        el('span', { class: 'settings-char-pick__name' }, [c.name]),
+      ]);
+      characterPicks.appendChild(tile);
+    }
+    // "+ Create new" tile (always last)
+    characterPicks.appendChild(
+      el('button', {
+        class: 'settings-char-pick settings-char-pick--add',
+        title: 'Create a new character (exits this run)',
+        onclick: () => {
+          sfx.click();
+          backdrop.remove();
+          opts.onCreateNewCharacter?.();
+        },
+      }, [
+        el('span', { class: 'settings-char-pick__plus' }, ['+']),
+        el('span', { class: 'settings-char-pick__name' }, ['New', el('br', {}), '(exits)']),
+      ]),
+    );
+    panel.appendChild(
+      el('div', { class: 'settings-row settings-row--stacked' }, [
+        el('label', {}, ['Hero']),
+        characterPicks,
       ]),
     );
 

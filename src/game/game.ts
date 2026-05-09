@@ -40,7 +40,13 @@ import type { LevelData, PlayerState } from './types.js';
 import { sfx, stopAmbient } from '../audio/sounds.js';
 import { loadImage } from '../util/face.js';
 import { formatTime } from '../util/time.js';
-import { deleteCharacter, getCharacter, getSettings, loseLife } from '../state.js';
+import {
+  deleteCharacter,
+  getCharacter,
+  getSelectedCharacter,
+  getSettings,
+  loseLife,
+} from '../state.js';
 
 function clamp(min: number, max: number, v: number): number {
   return Math.max(min, Math.min(max, v));
@@ -228,6 +234,23 @@ export class Game {
   /** Re-read settings (e.g. user changed zoom). Triggers a resize to recompute worldScale. */
   refresh(): void {
     this.resize();
+  }
+
+  /** Re-read the currently-selected character from state and swap the in-game face +
+   *  characterId + livesLeft. Used when the user switches mid-run via the settings panel.
+   *  The player's position/velocity/run progress is preserved. */
+  refreshCharacter(): void {
+    const selected = getSelectedCharacter();
+    if (!selected || selected.id === this.characterId) return;
+    this.characterId = selected.id;
+    this.livesLeft = selected.livesLeft ?? 3;
+    if (selected.faceImage) {
+      loadImage(selected.faceImage)
+        .then((img) => (this.faceImg = img))
+        .catch(() => (this.faceImg = null));
+    } else {
+      this.faceImg = null;
+    }
   }
 
   /** Begin the death animation. After 60 frames, handleLifeLost resolves it. */

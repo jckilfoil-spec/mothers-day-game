@@ -1,5 +1,5 @@
 import type { Screen } from '../router.js';
-import { el, mount } from '../util/dom.js';
+import { el, mount, clear } from '../util/dom.js';
 import { Game } from '../game/game.js';
 import {
   makeBeachLevel,
@@ -44,12 +44,21 @@ export const gameScreen: Screen = (root, nav, route) => {
       game.destroy();
       nav({ name: 'characters' });
     },
-  }, [
-    character.faceImage
-      ? el('img', { src: character.faceImage, alt: character.name })
-      : el('div', { class: 'placeholder' }, ['🙂']),
-    el('span', {}, [character.name]),
-  ]);
+  });
+  // Build chip contents from the currently-selected character; can be re-called when
+  // the user switches characters mid-run via the settings panel.
+  const renderChip = (): void => {
+    const c = getSelectedCharacter();
+    if (!c) return;
+    clear(charChip);
+    charChip.appendChild(
+      c.faceImage
+        ? el('img', { src: c.faceImage, alt: c.name })
+        : el('div', { class: 'placeholder' }, ['🙂']),
+    );
+    charChip.appendChild(el('span', {}, [c.name]));
+  };
+  renderChip();
 
   // Single gear button → opens the settings overlay (zoom, sound, death mode, quit).
   const gearBtn = el('button', {
@@ -61,6 +70,16 @@ export const gameScreen: Screen = (root, nav, route) => {
       game.pause();
       openSettings({
         onSettingsChange: () => game.refresh(),
+        onSwitchCharacter: () => {
+          // Mid-run swap: face + lives update, position/timer preserved.
+          game.refreshCharacter();
+          renderChip();
+        },
+        onCreateNewCharacter: () => {
+          // Drop the current run and head to the editor.
+          game.destroy();
+          nav({ name: 'editor', characterId: null });
+        },
         onQuit: () => {
           game.destroy();
           nav({ name: 'mapSelect' });
