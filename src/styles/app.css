@@ -674,16 +674,36 @@ img {
 }
 
 .game-hud__char {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--s-2);
   background: rgba(255, 254, 248, 0.85);
   backdrop-filter: blur(6px);
   padding: 6px 14px 6px 6px;
+  border: none;
   border-radius: 999px;
+  font-family: inherit;
+  font-size: inherit;
   font-weight: 500;
   color: var(--c-text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.game-hud__char:hover {
+  background: var(--c-card);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+}
+
+.game-hud__char:active {
+  transform: translateY(1px);
+}
+
+.game-hud__char:focus-visible {
+  outline: 3px solid var(--c-primary);
+  outline-offset: 2px;
 }
 
 .game-hud__char img,

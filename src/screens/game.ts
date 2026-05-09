@@ -30,7 +30,16 @@ export const gameScreen: Screen = (root, nav, route) => {
     title: 'Mute',
   }, [getSettings().muted ? '🔇' : '🔊']);
 
-  const charChip = el('div', { class: 'game-hud__char' }, [
+  const charChip = el('button', {
+    class: 'game-hud__char',
+    title: 'Back to title',
+    'aria-label': 'Back to title',
+    onclick: () => {
+      sfx.click();
+      game.destroy();
+      nav({ name: 'title' });
+    },
+  }, [
     character.faceImage
       ? el('img', { src: character.faceImage, alt: character.name })
       : el('div', { class: 'placeholder' }, ['🙂']),
