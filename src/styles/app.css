@@ -689,12 +689,16 @@ img {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
-.game-hud__char:hover {
-  background: var(--c-card);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+@media (hover: hover) and (pointer: fine) {
+  .game-hud__char:hover {
+    background: var(--c-card);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+  }
 }
 
 .game-hud__char:active {
@@ -737,10 +741,16 @@ img {
   color: var(--c-text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
-.icon-pill:hover {
-  background: var(--c-card);
+/* Hover only on devices that actually hover. Without this, iOS Safari leaves
+   :hover stuck after a tap and the pause button glows distractingly mid-game. */
+@media (hover: hover) and (pointer: fine) {
+  .icon-pill:hover {
+    background: var(--c-card);
+  }
 }
 
 .controls-banner {
@@ -866,6 +876,8 @@ img {
   -webkit-user-select: none;
   touch-action: manipulation;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .touch-btn:active {
