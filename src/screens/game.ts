@@ -32,12 +32,12 @@ export const gameScreen: Screen = (root, nav, route) => {
 
   const charChip = el('button', {
     class: 'game-hud__char',
-    title: 'Back to title',
-    'aria-label': 'Back to title',
+    title: 'Pick a different hero',
+    'aria-label': 'Pick a different hero',
     onclick: () => {
       sfx.click();
       game.destroy();
-      nav({ name: 'title' });
+      nav({ name: 'characters' });
     },
   }, [
     character.faceImage
