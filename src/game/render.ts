@@ -712,6 +712,46 @@ export function paintHotSand(
   ctx.restore();
 }
 
+/** Falling poop droplet — white-grey teardrop with a tiny shadow. */
+export function paintPoop(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): void {
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  ctx.save();
+  // Shadow underneath (faint, follows the drop)
+  ctx.fillStyle = 'rgba(42,31,26,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + h * 0.6, w * 0.4, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Body — slightly tear-drop shape (rounder at the bottom)
+  ctx.fillStyle = '#FAFAFA';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - h * 0.55);
+  ctx.bezierCurveTo(
+    cx + w * 0.45, cy - h * 0.2,
+    cx + w * 0.5, cy + h * 0.5,
+    cx, cy + h * 0.5,
+  );
+  ctx.bezierCurveTo(
+    cx - w * 0.5, cy + h * 0.5,
+    cx - w * 0.45, cy - h * 0.2,
+    cx, cy - h * 0.55,
+  );
+  ctx.closePath();
+  ctx.fill();
+  // Inner shadow on the right (light from upper-left)
+  ctx.fillStyle = '#D2D2D2';
+  ctx.beginPath();
+  ctx.ellipse(cx + w * 0.12, cy + h * 0.05, w * 0.18, h * 0.32, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 /** Cell phone — small dark rect with a glowing screen. */
 export function paintCellPhone(
   ctx: CanvasRenderingContext2D,

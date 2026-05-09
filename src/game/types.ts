@@ -43,6 +43,9 @@ export interface EnemyState {
   variant: 'rock' | 'slime' | 'phone' | 'seagull';
   /** When false, the enemy is clickable but doesn't block player movement (seagulls overhead). */
   solid: boolean;
+  /** Wall-clock ms (performance.now) for the next scheduled action. Seagulls use this for
+   *  poop drops. Undefined for variants that don't schedule. */
+  nextActionAt?: number;
   emoji: string;
 }
 
@@ -75,7 +78,7 @@ export interface PlayerState {
 /** A non-killable obstacle. Touching it bounces the player up and away — no damage, no death,
  *  just a comedic "ouch" with a brief invincibility window so the player can escape. */
 export interface Hazard extends Rect {
-  variant: 'hot-sand' | 'car';
+  variant: 'hot-sand' | 'car' | 'poop';
   /** Patrol speed (px/frame). 0 = stationary. */
   speed?: number;
   dir?: 1 | -1;
@@ -84,6 +87,15 @@ export interface Hazard extends Rect {
   /** For cars: stable index into the color palette. Increments on each direction reversal,
    *  so cars stay one color until they bounce off a wall. */
   colorIndex?: number;
+  /** Vertical velocity (px/frame). Used by falling hazards (poop). */
+  vy?: number;
+  /** When true, the hazard should be removed from the level next frame. */
+  dead?: boolean;
+}
+
+/** Per-frame seagull drop scheduling. */
+export interface SeagullExtra {
+  nextDropAt?: number;
 }
 
 export interface LevelData {

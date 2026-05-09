@@ -302,16 +302,16 @@ describe('hazards', () => {
       maxX: 600,
     };
     const startX = car.x;
-    stepHazards([car]);
+    stepHazards([car], 1000);
     expect(car.x).toBeGreaterThan(startX);
-    for (let i = 0; i < 1000; i++) stepHazards([car]);
+    for (let i = 0; i < 1000; i++) stepHazards([car], 1000);
     expect(car.x + car.w).toBeLessThanOrEqual(car.maxX!);
     expect(car.x).toBeGreaterThanOrEqual(car.minX!);
   });
 
   it('stationary hazards (no speed) do not move', () => {
     const sand: Hazard = { x: 50, y: 100, w: 80, h: 14, variant: 'hot-sand' };
-    stepHazards([sand]);
+    stepHazards([sand], 1000);
     expect(sand.x).toBe(50);
   });
 
@@ -329,7 +329,7 @@ describe('hazards', () => {
       colorIndex: 0,
     };
     // Walk to the right wall and back; should bounce twice → colorIndex jumps by 2.
-    for (let i = 0; i < 600; i++) stepHazards([car]);
+    for (let i = 0; i < 600; i++) stepHazards([car], 1000);
     expect(car.colorIndex).toBeGreaterThan(0);
   });
 });

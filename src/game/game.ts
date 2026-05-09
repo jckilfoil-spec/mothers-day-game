@@ -26,6 +26,7 @@ import {
   paintCar,
   paintCarScene,
   paintGoalParticles,
+  paintPoop,
   paintCaveScene,
   paintCrystal,
   paintFlag,
@@ -222,7 +223,34 @@ export class Game {
     }
     stepPlayer(this.player, this.input.state, this.level.platforms, this.level.enemies, this.level.width);
     stepEnemies(this.level.enemies);
-    stepHazards(this.level.hazards);
+
+    // Schedule new seagull poops on a per-bird timer; spawn directly into level.hazards.
+    const now = performance.now();
+    for (const e of this.level.enemies) {
+      if (e.variant !== 'seagull' || e.defeatT > 0) continue;
+      if (e.nextActionAt === undefined) {
+        // First scheduling: stagger initial drops so they don't all fire at once.
+        e.nextActionAt = now + 1500 + Math.random() * 2500;
+        continue;
+      }
+      if (now >= e.nextActionAt) {
+        this.level.hazards.push({
+          x: e.x + e.w / 2 - 6,
+          y: e.y + e.h - 4,
+          w: 12,
+          h: 12,
+          variant: 'poop',
+          vy: 1,
+        });
+        e.nextActionAt = now + 1800 + Math.random() * 2400;
+      }
+    }
+
+    stepHazards(this.level.hazards, this.level.height - 32);
+    // Sweep dead hazards (poop that hit the floor).
+    if (this.level.hazards.some((h) => h.dead)) {
+      this.level.hazards = this.level.hazards.filter((h) => !h.dead);
+    }
     const bounced = applyHazardBounce(this.player, this.level.hazards);
     if (bounced) {
       if (bounced.variant === 'car') sfx.honk();
@@ -300,6 +328,9 @@ export class Game {
           break;
         case 'car':
           paintCar(ctx, hz.x, hz.y, hz.w, hz.h, hz.dir ?? 1, hz.colorIndex ?? 0, t);
+          break;
+        case 'poop':
+          paintPoop(ctx, hz.x, hz.y, hz.w, hz.h);
           break;
       }
     }

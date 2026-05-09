@@ -185,11 +185,21 @@ export function stepPlayer(
   player.animT++;
 }
 
-/** Patrol moving hazards (cars). Stationary hazards (speed=0 or undefined) are no-ops.
- *  Increments colorIndex on each direction reversal so cars stay one color until they
- *  bounce off a wall — passive visual feedback that they "turned around". */
-export function stepHazards(hazards: Hazard[]): void {
+/** Step all hazards.
+ *  - Patrol hazards (cars) move horizontally and bounce; colorIndex flips on each bounce.
+ *  - Falling hazards (poop) accelerate downward; marked dead when they pass the floor. */
+export function stepHazards(hazards: Hazard[], floorY: number): void {
   for (const h of hazards) {
+    // Falling hazards (poop droplets)
+    if (h.variant === 'poop') {
+      h.vy = (h.vy ?? 1) + 0.45;
+      h.y += h.vy;
+      if (h.y > floorY - 6) {
+        h.dead = true;
+      }
+      continue;
+    }
+    // Patrolling hazards (cars)
     if (!h.speed || h.speed === 0) continue;
     const dir = h.dir ?? 1;
     h.x += h.speed * dir;

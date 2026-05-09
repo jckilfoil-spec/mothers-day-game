@@ -3,6 +3,8 @@
 *::before,
 *::after {
   box-sizing: border-box;
+  /* Kill the iOS gray flash on tap, everywhere. Per-element overrides are unnecessary. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -22,6 +24,22 @@ body {
   font-size: 18px;
   line-height: 1.5;
   min-height: 100dvh;
+  /* Disable double-tap-to-zoom (and the 300ms tap delay) globally. Pinch-zoom for
+     accessibility still works. Critical for the game canvas, where spam-clicking on
+     a phone otherwise triggers iOS Safari's double-tap zoom. */
+  touch-action: manipulation;
+}
+
+button,
+a,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Belt-and-suspenders for the game canvas — never zoom mid-game from a fast tap. */
+.game-stage,
+.game-stage canvas {
+  touch-action: manipulation;
 }
 
 #app {
