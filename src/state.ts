@@ -18,12 +18,20 @@ export interface Character {
   faceImage: string | null;
   customMessage: string;
   createdAt: number;
+  /** Number of lives left. Only meaningful when settings.deathMode is on; decrements
+   *  on death and the character is deleted when this hits 0. */
+  livesLeft?: number;
 }
 
 export interface Settings {
   selectedCharacterId: string | null;
   muted: boolean;
   lastMap: MapId | null;
+  /** User-controlled camera zoom multiplier on top of the auto-scale. 1.0 = no change. */
+  zoom: number;
+  /** When true, hazards damage the player. 5 HP per life, 3 lives per character —
+   *  losing all 3 deletes the character. Default off; pure whimsy unless toggled. */
+  deathMode: boolean;
 }
 
 const CHARACTERS_KEY = 'mdg.characters';
@@ -35,6 +43,8 @@ const DEFAULT_SETTINGS: Settings = {
   selectedCharacterId: null,
   muted: false,
   lastMap: null,
+  zoom: 1,
+  deathMode: false,
 };
 
 const DEFAULT_MESSAGE =
@@ -133,6 +143,7 @@ export function addCharacter(input: NewCharacterInput): Character {
     faceImage: input.faceImage,
     customMessage: (input.customMessage ?? DEFAULT_MESSAGE).trim() || DEFAULT_MESSAGE,
     createdAt: Date.now(),
+    livesLeft: 3,
   };
   const list = getCharacters();
   list.push(c);
@@ -142,6 +153,26 @@ export function addCharacter(input: NewCharacterInput): Character {
     selectCharacter(c.id);
   }
   return c;
+}
+
+/** Decrement a character's lives by 1 (only used in death mode). Returns the new count. */
+export function loseLife(id: string): number {
+  const list = getCharacters();
+  const c = list.find((x) => x.id === id);
+  if (!c) return 0;
+  const current = c.livesLeft ?? 3;
+  c.livesLeft = Math.max(0, current - 1);
+  writeJSON(CHARACTERS_KEY, list);
+  return c.livesLeft;
+}
+
+/** Reset a character's lives to 3 (e.g. user reset action). */
+export function resetLives(id: string): void {
+  const list = getCharacters();
+  const c = list.find((x) => x.id === id);
+  if (!c) return;
+  c.livesLeft = 3;
+  writeJSON(CHARACTERS_KEY, list);
 }
 
 export type CharacterPatch = Partial<Pick<Character, 'name' | 'faceImage' | 'customMessage'>>;
@@ -200,6 +231,14 @@ export function setMuted(muted: boolean): void {
 
 export function setLastMap(map: MapId): void {
   saveSettings({ ...getSettings(), lastMap: map });
+}
+
+export function setZoom(zoom: number): void {
+  saveSettings({ ...getSettings(), zoom: Math.max(0.5, Math.min(2.0, zoom)) });
+}
+
+export function setDeathMode(deathMode: boolean): void {
+  saveSettings({ ...getSettings(), deathMode });
 }
 
 export { DEFAULT_MESSAGE };

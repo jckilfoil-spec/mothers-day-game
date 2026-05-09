@@ -129,11 +129,12 @@ export function makeBeachLevel(): LevelData {
   ];
 
   // Seagulls patrol overhead — pass-through, but the player can spam-click to defeat them
-  // before they "drop one" on the run. (The dropping is currently implied 😉)
+  // before they drop poop on the run. Tuned LOW enough that they're easy to tap on
+  // a desktop where the whole world fits in the viewport.
   const enemies = [
-    makeEnemy(420, 220, 'seagull', 200),
-    makeEnemy(1180, 180, 'seagull', 240),
-    makeEnemy(1980, 240, 'seagull', 220),
+    makeEnemy(420, 410, 'seagull', 200),
+    makeEnemy(1180, 380, 'seagull', 240),
+    makeEnemy(1980, 420, 'seagull', 220),
   ];
 
   return {

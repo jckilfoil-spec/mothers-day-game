@@ -40,6 +40,11 @@ import type { LevelData, PlayerState } from './types.js';
 import { sfx, stopAmbient } from '../audio/sounds.js';
 import { loadImage } from '../util/face.js';
 import { formatTime } from '../util/time.js';
+import { getSettings } from '../state.js';
+
+function clamp(min: number, max: number, v: number): number {
+  return Math.max(min, Math.min(max, v));
+}
 
 export interface GameOpts {
   level: LevelData;
@@ -79,11 +84,16 @@ export class Game {
 
   private won = false;
   private winT = 0;
+  /** When true, update() is a no-op and the timer freezes. draw() still runs so the
+   *  frozen frame is visible behind menus / settings overlays. */
+  private paused = false;
 
   /** Wall-clock ms when the player first moved (or null until they have). */
   private startedAt: number | null = null;
   /** Wall-clock ms when the player reached the goal (or null until they have). */
   private completedAt: number | null = null;
+  /** Wall-clock ms when pause started (used to credit the timer back on resume). */
+  private pausedAt: number | null = null;
 
   constructor(canvas: HTMLCanvasElement, opts: GameOpts, callbacks: GameCallbacks) {
     this.canvas = canvas;
@@ -147,9 +157,13 @@ export class Game {
     const h = window.innerHeight;
     this.viewport = { w, h };
     // Scale up the world rendering on wider viewports so desktop / large screens don't
-    // leave the action looking tiny. Mobile (anything ≤ ~800px wide) stays at 1.0,
-    // preserving the mobile-native baseline. Cap at 1.5 to keep proportions sane.
-    this.worldScale = Math.max(1, Math.min(1.5, w / 900));
+    // leave the action looking tiny. Mobile (anything ≤ ~800px wide) stays at 1.0.
+    // Capped at 1.3 so the bottom doesn't run out of room on horizontal levels and
+    // the user has room left over for the live HUD + touch buttons.
+    const base = Math.max(1, Math.min(1.3, w / 900));
+    // Multiply by the user's saved zoom preference (defaults to 1.0; slider in
+    // settings can tune in either direction).
+    this.worldScale = clamp(0.6, 1.8, base * (getSettings().zoom ?? 1));
     if (typeof window !== 'undefined' && window.matchMedia) {
       this.isTouch = window.matchMedia('(pointer: coarse)').matches;
     }
@@ -192,6 +206,31 @@ export class Game {
     this.rafId = requestAnimationFrame(this.tick);
   }
 
+  /** Re-read settings (e.g. user changed zoom). Triggers a resize to recompute worldScale. */
+  refresh(): void {
+    this.resize();
+  }
+
+  /** Freeze the simulation. The render loop continues so the frozen frame stays visible. */
+  pause(): void {
+    if (this.paused) return;
+    this.paused = true;
+    // Freeze the timer too — record the pause point so resuming restarts it cleanly.
+    if (this.startedAt !== null && this.completedAt === null) {
+      this.pausedAt = performance.now();
+    }
+  }
+
+  resume(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    if (this.pausedAt !== null && this.startedAt !== null) {
+      // Shift startedAt forward by however long we were paused so elapsedMs is unaffected.
+      this.startedAt += performance.now() - this.pausedAt;
+    }
+    this.pausedAt = null;
+  }
+
   destroy(): void {
     this.running = false;
     cancelAnimationFrame(this.rafId);
@@ -214,6 +253,7 @@ export class Game {
   };
 
   private update(): void {
+    if (this.paused) return;
     this.input.beginFrame();
     if (this.won) {
       this.winT++;

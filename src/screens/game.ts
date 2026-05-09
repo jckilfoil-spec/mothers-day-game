@@ -7,8 +7,9 @@ import {
   makeCaveLevel,
   makeMountainLevel,
 } from '../game/levels.js';
-import { getSelectedCharacter, getSettings, setMuted } from '../state.js';
-import { setMuted as audioSetMuted, sfx, unlock } from '../audio/sounds.js';
+import { getSelectedCharacter } from '../state.js';
+import { sfx, unlock } from '../audio/sounds.js';
+import { openSettings } from './settings.js';
 
 /** Game screen — fullscreen canvas with HUD overlay. */
 export const gameScreen: Screen = (root, nav, route) => {
@@ -34,11 +35,6 @@ export const gameScreen: Screen = (root, nav, route) => {
   const canvas = el('canvas', {}) as HTMLCanvasElement;
   const stage = el('div', { class: 'game-stage' }, [canvas]);
 
-  const muteBtn = el('button', {
-    class: 'icon-pill',
-    title: 'Mute',
-  }, [getSettings().muted ? '🔇' : '🔊']);
-
   const charChip = el('button', {
     class: 'game-hud__char',
     title: 'Pick a different hero',
@@ -55,20 +51,28 @@ export const gameScreen: Screen = (root, nav, route) => {
     el('span', {}, [character.name]),
   ]);
 
-  const hud = el('div', { class: 'game-hud' }, [
-    charChip,
-    el('div', { class: 'game-hud__buttons' }, [
-      muteBtn,
-      el('button', {
-        class: 'icon-pill',
-        title: 'Pause / menu',
-        onclick: () => {
-          sfx.click();
+  // Single gear button → opens the settings overlay (zoom, sound, death mode, quit).
+  const gearBtn = el('button', {
+    class: 'icon-pill',
+    title: 'Settings',
+    'aria-label': 'Settings',
+    onclick: () => {
+      sfx.click();
+      game.pause();
+      openSettings({
+        onSettingsChange: () => game.refresh(),
+        onQuit: () => {
           game.destroy();
           nav({ name: 'mapSelect' });
         },
-      }, ['⏸']),
-    ]),
+        onClose: () => game.resume(),
+      });
+    },
+  }, ['⚙']);
+
+  const hud = el('div', { class: 'game-hud' }, [
+    charChip,
+    el('div', { class: 'game-hud__buttons' }, [gearBtn]),
   ]);
 
   const bannerCloseBtn = el('button', {
@@ -125,13 +129,7 @@ export const gameScreen: Screen = (root, nav, route) => {
   game.bindTouchButton(touchControls.querySelector('#btn-jump') as HTMLElement, 'jump');
   game.bindTouchButton(touchControls.querySelector('#btn-down') as HTMLElement, 'down');
 
-  // Mute toggle
-  muteBtn.addEventListener('click', () => {
-    const next = !getSettings().muted;
-    setMuted(next);
-    audioSetMuted(next);
-    muteBtn.textContent = next ? '🔇' : '🔊';
-  });
+  // (Mute / pause moved into the settings panel — opened by the gear icon.)
 
   // Banner persists until the user explicitly dismisses it via the X button.
 
