@@ -636,11 +636,37 @@ export class Game {
     ctx.textBaseline = 'top';
     ctx.fillText(`${Math.round(progress * 100)}%`, goalCx, barY + barH + 8);
 
-    // Live time, only after the player moves.
+    // Live time, only after the player moves. Stays tiny on phones, scales up on
+    // desktop. Always wrapped in a cocoa pill with a cream outline so it reads
+    // against any scene color (snow, sand, sky, asphalt).
     if (this.startedAt !== null) {
-      ctx.fillStyle = 'rgba(42, 31, 26, 0.55)';
-      ctx.font = '500 11px Fredoka, system-ui, sans-serif';
-      ctx.fillText(formatTime(this.elapsedMs()), goalCx, barY + barH + 24);
+      const wpx = this.viewport.w;
+      const isMobile = this.isTouch || wpx <= 700;
+      const timerFontPx = isMobile
+        ? 12
+        : Math.min(26, Math.round(13 + (wpx - 700) / 60));
+      const timerText = formatTime(this.elapsedMs());
+      ctx.font = `700 ${timerFontPx}px Fredoka, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const textW = ctx.measureText(timerText).width;
+      const padX = Math.max(8, timerFontPx * 0.55);
+      const padY = Math.max(4, timerFontPx * 0.3);
+      const pillW = textW + padX * 2;
+      const pillH = timerFontPx + padY * 2;
+      const pillTop = barY + barH + 22;
+      // Right-anchor the pill so a wider desktop timer extends LEFT toward
+      // open space instead of off the screen edge.
+      const pillRight = Math.min(goalCx + pillW / 2, w - 6);
+      const pillLeft = pillRight - pillW;
+      ctx.fillStyle = 'rgba(42, 31, 26, 0.85)';
+      roundedRect(ctx, pillLeft, pillTop, pillW, pillH, pillH / 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 254, 248, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = '#FFFEF8';
+      ctx.fillText(timerText, pillLeft + pillW / 2, pillTop + pillH / 2);
     }
 
     ctx.restore();
