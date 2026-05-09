@@ -20,7 +20,7 @@ import {
   paintRockPlatform,
 } from './render.js';
 import type { LevelData, PlayerState } from './types.js';
-import { sfx, startAmbient, stopAmbient } from '../audio/sounds.js';
+import { sfx, stopAmbient } from '../audio/sounds.js';
 import { loadImage } from '../util/face.js';
 
 export interface GameOpts {
@@ -76,7 +76,6 @@ export class Game {
     // Snap camera to player on start so the first frame shows the action,
     // not (0, 0) of the world.
     this.snapCameraToPlayer();
-    startAmbient(opts.level.map);
   }
 
   private snapCameraToPlayer(): void {
@@ -93,7 +92,7 @@ export class Game {
     );
   }
 
-  bindTouchButton(button: HTMLElement, key: 'left' | 'right' | 'jump'): void {
+  bindTouchButton(button: HTMLElement, key: 'left' | 'right' | 'jump' | 'down'): void {
     this.input.bindButton(button, key);
   }
 
@@ -232,6 +231,9 @@ export class Game {
 
     ctx.restore();
 
+    // Progress bar (screen-space, on top of the world)
+    this.drawProgressBar();
+
     // Win overlay (fade to white)
     if (this.won) {
       const k = Math.min(1, this.winT / 24);
@@ -239,4 +241,104 @@ export class Game {
       ctx.fillRect(0, 0, w, h);
     }
   }
+
+  /** Vertical "how close to the goal" bar pinned to the right side of the viewport.
+   *  Mountain fills bottom-up (climbing). Cave fills top-down (descending). */
+  private drawProgressBar(): void {
+    const { ctx } = this;
+    const { w, h } = this.viewport;
+    const barX = w - 32;
+    const topMargin = 110; // leave room for the HUD chip / mute / pause
+    const bottomMargin = 90; // leave room for touch controls / banner
+    const barY = topMargin;
+    const barW = 14;
+    const barH = Math.max(120, h - topMargin - bottomMargin);
+    const radius = barW / 2;
+
+    // Track
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 254, 248, 0.65)';
+    ctx.strokeStyle = 'rgba(42,31,26,0.18)';
+    ctx.lineWidth = 1;
+    roundedRect(ctx, barX, barY, barW, barH, radius);
+    ctx.fill();
+    ctx.stroke();
+
+    // Progress 0..1 toward the goal
+    const startY = this.level.playerStart.y;
+    const goalY = this.level.goal.y;
+    const playerY = this.player.y;
+    const denom = goalY - startY;
+    const raw = denom === 0 ? 1 : (playerY - startY) / denom;
+    const progress = Math.max(0, Math.min(1, raw));
+
+    // Fill — direction-aware
+    const fillColor = this.level.scrollDir === -1 ? '#F4A56C' : '#6FB5A8';
+    const fillH = barH * progress;
+    if (fillH > 0.5) {
+      ctx.fillStyle = fillColor;
+      if (this.level.scrollDir === -1) {
+        // Mountain: fill from the bottom up
+        roundedRect(ctx, barX, barY + barH - fillH, barW, fillH, radius);
+      } else {
+        // Cave: fill from the top down
+        roundedRect(ctx, barX, barY, barW, fillH, radius);
+      }
+      ctx.fill();
+    }
+
+    // Goal cap — circle at the goal end of the bar
+    const goalCx = barX + barW / 2;
+    const goalCy = this.level.scrollDir === -1 ? barY : barY + barH;
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    ctx.arc(goalCx, goalCy, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFEF8';
+    ctx.font = 'bold 11px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.level.scrollDir === -1 ? '🚩' : '💎', goalCx, goalCy);
+
+    // "you are here" marker
+    const youCy = this.level.scrollDir === -1 ? barY + barH - fillH : barY + fillH;
+    ctx.fillStyle = '#FFFEF8';
+    ctx.strokeStyle = fillColor;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(goalCx, youCy, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Percentage label below the bar (screen reader friendly via label below)
+    ctx.fillStyle = 'rgba(42, 31, 26, 0.78)';
+    ctx.font = '600 12px Fredoka, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`${Math.round(progress * 100)}%`, goalCx, barY + barH + 8);
+
+    ctx.restore();
+  }
+}
+
+function roundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+): void {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
 }

@@ -37,7 +37,8 @@ const DEFAULT_SETTINGS: Settings = {
   lastMap: null,
 };
 
-const DEFAULT_MESSAGE = "Happy Mother's Day, Mommy! Love, Quinn 💛";
+const DEFAULT_MESSAGE =
+  'Thank you so much for everything mom, you gave me the world and I love you so much.';
 
 /** Tiny in-memory fallback used when localStorage is unavailable. */
 type Store = { get(k: string): string | null; set(k: string, v: string): void; remove(k: string): void };

@@ -11,6 +11,7 @@ export function makePlayer(x: number, y: number): PlayerState {
   return {
     x,
     y,
+    prevY: y,
     vx: 0,
     vy: 0,
     w: 44,
@@ -19,6 +20,7 @@ export function makePlayer(x: number, y: number): PlayerState {
     grounded: false,
     airT: 0,
     jumpBuffer: 0,
+    dropThrough: 0,
     animT: 0,
     attackT: 0,
     walking: false,
@@ -30,11 +32,25 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/** Resolve player against a single platform via the standard "smallest overlap axis" approach. */
+/** Resolve player against a single platform.
+ *  - Solid platforms: standard "smallest overlap axis" AABB.
+ *  - One-way platforms: only land from above; no head-bonk; ignored entirely while
+ *    `dropThrough` is active or when moving up. */
 function resolvePlatform(p: PlayerState, plat: Platform): { groundedNow: boolean } {
   const overlapX = Math.min(p.x + p.w, plat.x + plat.w) - Math.max(p.x, plat.x);
   const overlapY = Math.min(p.y + p.h, plat.y + plat.h) - Math.max(p.y, plat.y);
   if (overlapX <= 0 || overlapY <= 0) return { groundedNow: false };
+
+  if (plat.oneWay) {
+    if (p.dropThrough > 0) return { groundedNow: false };
+    if (p.vy < 0) return { groundedNow: false };
+    // Only land if the player's bottom was at-or-above the platform top last frame.
+    const playerBottomPrev = p.prevY + p.h;
+    if (playerBottomPrev > plat.y + 0.5) return { groundedNow: false };
+    p.y = plat.y - p.h;
+    p.vy = 0;
+    return { groundedNow: true };
+  }
 
   if (overlapY < overlapX) {
     // resolve along Y
@@ -83,6 +99,9 @@ export function stepPlayer(
   enemies: EnemyState[],
   worldWidth: number,
 ): void {
+  // Snapshot prevY for one-way platform crossing checks.
+  player.prevY = player.y;
+
   // ---- Horizontal ----
   if (input.left && !input.right) {
     player.vx = -PHYSICS.moveSpeed;
@@ -94,6 +113,13 @@ export function stepPlayer(
     player.vx *= player.grounded ? PHYSICS.groundFriction : PHYSICS.airDrag;
     if (Math.abs(player.vx) < 0.05) player.vx = 0;
   }
+
+  // ---- Drop-through (down key) ----
+  if (input.downPressed && player.grounded) {
+    player.dropThrough = PHYSICS.dropThroughFrames;
+    player.grounded = false; // momentarily ungrounded so the resolve passes through
+  }
+  if (player.dropThrough > 0) player.dropThrough--;
 
   // ---- Jump (with coyote + buffer) ----
   if (input.jumpPressed) player.jumpBuffer = PHYSICS.jumpBufferFrames;

@@ -4,7 +4,15 @@ import { reachedGoal, stepPlayer, makePlayer, respawnIfFell } from '../src/game/
 import type { InputState } from '../src/game/types.js';
 
 function noInput(): InputState {
-  return { left: false, right: false, jump: false, jumpPressed: false, clickWorld: null };
+  return {
+    left: false,
+    right: false,
+    jump: false,
+    down: false,
+    jumpPressed: false,
+    downPressed: false,
+    clickWorld: null,
+  };
 }
 
 describe('Mountain level', () => {

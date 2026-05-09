@@ -53,9 +53,25 @@ export const gameScreen: Screen = (root, nav, route) => {
     ]),
   ]);
 
+  const bannerCloseBtn = el('button', {
+    class: 'controls-banner__close',
+    title: 'Got it',
+    'aria-label': 'Dismiss controls hint',
+  }, ['×']);
   const banner = el('div', { class: 'controls-banner' }, [
-    'Arrows or A/D to move · Space to jump · Click monsters to defeat',
+    el('span', { class: 'controls-banner__row' }, [
+      el('kbd', {}, ['◀']), el('kbd', {}, ['▶']), ' move  ',
+      el('kbd', {}, ['Space']), ' or ', el('kbd', {}, ['↑']), ' jump (jump up through platforms)  ',
+      el('kbd', {}, ['↓']), ' drop through  ',
+      el('span', { class: 'muted' }, ['· click silly monsters to defeat them']),
+    ]),
+    bannerCloseBtn,
   ]);
+  bannerCloseBtn.addEventListener('click', () => {
+    sfx.click();
+    banner.classList.add('is-fading');
+    setTimeout(() => banner.remove(), 250);
+  });
 
   const touchControls = el('div', { class: 'touch-controls' }, [
     el('div', { class: 'touch-cluster' }, [
@@ -63,7 +79,8 @@ export const gameScreen: Screen = (root, nav, route) => {
       el('button', { class: 'touch-btn', id: 'btn-right' }, ['▶']),
     ]),
     el('div', { class: 'touch-cluster' }, [
-      el('button', { class: 'touch-btn', id: 'btn-jump' }, ['⤒']),
+      el('button', { class: 'touch-btn', id: 'btn-down' }, ['▼']),
+      el('button', { class: 'touch-btn', id: 'btn-jump' }, ['▲']),
     ]),
   ]);
 
@@ -88,6 +105,7 @@ export const gameScreen: Screen = (root, nav, route) => {
   game.bindTouchButton(touchControls.querySelector('#btn-left') as HTMLElement, 'left');
   game.bindTouchButton(touchControls.querySelector('#btn-right') as HTMLElement, 'right');
   game.bindTouchButton(touchControls.querySelector('#btn-jump') as HTMLElement, 'jump');
+  game.bindTouchButton(touchControls.querySelector('#btn-down') as HTMLElement, 'down');
 
   // Mute toggle
   muteBtn.addEventListener('click', () => {
@@ -97,9 +115,7 @@ export const gameScreen: Screen = (root, nav, route) => {
     muteBtn.textContent = next ? '🔇' : '🔊';
   });
 
-  // Fade banner after 4s
-  setTimeout(() => banner.classList.add('is-fading'), 4000);
-  setTimeout(() => banner.remove(), 5200);
+  // Banner persists until the user explicitly dismisses it via the X button.
 
   game.start();
 

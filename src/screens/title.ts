@@ -1,7 +1,7 @@
 import type { Screen } from '../router.js';
 import { el, mount } from '../util/dom.js';
 import { paintMountainScene } from '../game/render.js';
-import { sfx, startAmbient, unlock } from '../audio/sounds.js';
+import { sfx, unlock } from '../audio/sounds.js';
 
 /**
  * Title screen — soft mountain sunrise behind a single huge "Start" CTA.
@@ -60,10 +60,10 @@ export const titleScreen: Screen = (root, nav) => {
   };
   tick();
 
-  // Start a soft menu ambient — but only after first interaction will we hear it
+  // Unlock audio on first interaction (browsers require a user gesture before WebAudio plays).
+  // No ambient music — just enables click/jump/win SFX later.
   const onFirst = (): void => {
     unlock();
-    startAmbient('menu');
     window.removeEventListener('pointerdown', onFirst);
     window.removeEventListener('keydown', onFirst);
   };

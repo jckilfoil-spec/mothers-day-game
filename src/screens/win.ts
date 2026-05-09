@@ -29,6 +29,7 @@ export const winScreen: Screen = (root, nav, route) => {
     el('p', { class: 'win__greeting' }, ["Happy Mother's Day,"]),
     el('h1', { class: 'win__name' }, [character.name + '!']),
     el('p', { class: 'win__msg' }, [character.customMessage]),
+    el('p', { class: 'win__hint' }, ['Take a beat. Then —']),
     el('div', { class: 'win__buttons' }, [
       el('button', {
         class: 'btn',

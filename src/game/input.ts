@@ -9,7 +9,9 @@ export class Input {
     left: false,
     right: false,
     jump: false,
+    down: false,
     jumpPressed: false,
+    downPressed: false,
     clickWorld: null,
   };
 
@@ -17,6 +19,7 @@ export class Input {
   private onClick: ClickHandler;
   private cleanups: (() => void)[] = [];
   private jumpEdge = false;
+  private downEdge = false;
 
   constructor(canvas: HTMLCanvasElement, onClick: ClickHandler) {
     this.canvas = canvas;
@@ -48,6 +51,13 @@ export class Input {
           this.state.jump = true;
           e.preventDefault();
           break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          if (!this.state.down) this.downEdge = true;
+          this.state.down = true;
+          e.preventDefault();
+          break;
       }
     };
     const onKeyUp = (e: KeyboardEvent): void => {
@@ -68,6 +78,11 @@ export class Input {
         case 'W':
           this.state.jump = false;
           break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          this.state.down = false;
+          break;
       }
     };
     const onClickEvt = (e: PointerEvent): void => {
@@ -85,10 +100,11 @@ export class Input {
   }
 
   /** Add a UI button that simulates a key — useful for mobile on-screen controls. */
-  bindButton(button: HTMLElement, key: 'left' | 'right' | 'jump'): void {
+  bindButton(button: HTMLElement, key: 'left' | 'right' | 'jump' | 'down'): void {
     const press = (e: Event): void => {
       e.preventDefault();
       if (key === 'jump' && !this.state.jump) this.jumpEdge = true;
+      if (key === 'down' && !this.state.down) this.downEdge = true;
       this.state[key] = true;
     };
     const release = (e: Event): void => {
@@ -108,7 +124,9 @@ export class Input {
   /** Call once per frame to consume edge events into the InputState. */
   beginFrame(): void {
     this.state.jumpPressed = this.jumpEdge;
+    this.state.downPressed = this.downEdge;
     this.jumpEdge = false;
+    this.downEdge = false;
   }
 
   destroy(): void {

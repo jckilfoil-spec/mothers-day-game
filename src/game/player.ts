@@ -30,8 +30,11 @@ export function drawPlayer(
 
   drawRobe(ctx);
   drawFeet(ctx, player);
-  drawHead(ctx, opts.faceImage);
+  // Staff is drawn AFTER the body (so the body covers the lower shaft) but BEFORE
+  // the head (so the head paints on top — protecting the uploaded face from any
+  // accidental overlap).
   drawStaff(ctx, player, opts.variant);
+  drawHead(ctx, opts.faceImage);
 
   ctx.restore();
 }
@@ -142,21 +145,24 @@ function drawStaff(
   player: PlayerState,
   variant: 'mountain' | 'cave',
 ): void {
-  // Pivot at chest (~y=-42).
+  // Anchor at chest, OUTSIDE the body silhouette on the facing-forward side. baseAngle is
+  // positive (leans outward) so the orb ends up clearly to the side of the head — never
+  // covering the uploaded face. Body covers the lower shaft; head is drawn on top.
+  const BASE = 0.55;
   const baseAngle = player.walking
-    ? -0.26 + Math.sin(player.animT * 0.3 + Math.PI) * 0.09 // walk: gentle counter-sway
-    : -0.26 + Math.sin(player.animT * 0.1) * 0.05; // idle sway
+    ? BASE + Math.sin(player.animT * 0.3 + Math.PI) * 0.07 // walk: gentle counter-sway
+    : BASE + Math.sin(player.animT * 0.1) * 0.04; // idle sway
 
   let attackAngle = 0;
   if (player.attackT > 0) {
     // Map attack timer (0..15) into a smooth swing forward then back.
     const k = 1 - player.attackT / 15;
     const swing = Math.sin(k * Math.PI);
-    attackAngle = swing * 1.2;
+    attackAngle = swing * 0.8;
   }
 
   ctx.save();
-  ctx.translate(8, -42);
+  ctx.translate(18, -45);
   ctx.rotate(baseAngle + attackAngle);
 
   // Shaft
@@ -175,21 +181,19 @@ function drawStaff(
   ctx.arc(0, -34, 2.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Gnarled top + glowing orb
+  // Gnarled top + glowing orb (smaller glow so it doesn't bleed onto the face)
   const orbColor = variant === 'mountain' ? '#A8E6DC' : '#FFB870';
-  const orbGlow = variant === 'mountain' ? 'rgba(168,230,220,0.55)' : 'rgba(255,184,112,0.55)';
-  // glow
-  const rg = ctx.createRadialGradient(0, -62, 0, 0, -62, 18);
+  const orbGlow = variant === 'mountain' ? 'rgba(168,230,220,0.5)' : 'rgba(255,184,112,0.5)';
+  const rg = ctx.createRadialGradient(0, -62, 0, 0, -62, 14);
   rg.addColorStop(0, orbGlow);
   rg.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = rg;
   ctx.beginPath();
-  ctx.arc(0, -62, 18, 0, Math.PI * 2);
+  ctx.arc(0, -62, 14, 0, Math.PI * 2);
   ctx.fill();
-  // orb
   ctx.fillStyle = orbColor;
   ctx.beginPath();
-  ctx.arc(0, -62, 6, 0, Math.PI * 2);
+  ctx.arc(0, -62, 5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();

@@ -13,10 +13,19 @@ import type { InputState, Platform } from '../src/game/types.js';
 import { PHYSICS } from '../src/game/types.js';
 
 function noInput(): InputState {
-  return { left: false, right: false, jump: false, jumpPressed: false, clickWorld: null };
+  return {
+    left: false,
+    right: false,
+    jump: false,
+    down: false,
+    jumpPressed: false,
+    downPressed: false,
+    clickWorld: null,
+  };
 }
 
 const FLOOR: Platform = { x: 0, y: 500, w: 1000, h: 50 };
+const ONE_WAY: Platform = { x: 100, y: 350, w: 200, h: 16, oneWay: true };
 
 describe('rectsOverlap', () => {
   it('detects overlap', () => {
@@ -181,6 +190,76 @@ describe('enemy interactions', () => {
     for (let i = 0; i < 200; i++) stepEnemies([e]);
     expect(e.x + e.w).toBeLessThanOrEqual(e.maxX);
     expect(e.x).toBeGreaterThanOrEqual(e.minX);
+  });
+});
+
+describe('one-way platforms', () => {
+  it('lets a player jump UP through a one-way platform without bonking head', () => {
+    // Land player on the floor first, then jump.
+    const p = makePlayer(150, FLOOR.y - 200);
+    for (let i = 0; i < 30; i++) stepPlayer(p, noInput(), [FLOOR, ONE_WAY], [], 1000);
+    expect(p.grounded).toBe(true);
+    // Press jump — should rise past the one-way platform's top without snagging.
+    const jump = noInput();
+    jump.jump = true;
+    jump.jumpPressed = true;
+    let crossed = false;
+    let peakY = p.y;
+    for (let i = 0; i < 80; i++) {
+      // Hold jump for the whole rise to get full jump height.
+      const holdJump = noInput();
+      holdJump.jump = true;
+      if (i === 0) holdJump.jumpPressed = true;
+      stepPlayer(p, holdJump, [FLOOR, ONE_WAY], [], 1000);
+      if (p.y < peakY) peakY = p.y;
+      if (p.y + p.h < ONE_WAY.y) crossed = true;
+      if (p.vy > 0 && p.y + p.h > ONE_WAY.y) break; // already coming down past platform
+    }
+    expect(crossed).toBe(true);
+  });
+
+  it('lands the player on top of a one-way platform when falling onto it', () => {
+    // Place player above the platform, falling.
+    const p = makePlayer(150, ONE_WAY.y - 100);
+    p.prevY = p.y;
+    for (let i = 0; i < 120; i++) stepPlayer(p, noInput(), [FLOOR, ONE_WAY], [], 1000);
+    expect(p.grounded).toBe(true);
+    expect(p.y + p.h).toBeCloseTo(ONE_WAY.y, 0);
+  });
+
+  it('drops through a one-way platform when Down is pressed and grounded', () => {
+    // Land first
+    const p = makePlayer(150, ONE_WAY.y - 100);
+    p.prevY = p.y;
+    for (let i = 0; i < 60; i++) stepPlayer(p, noInput(), [FLOOR, ONE_WAY], [], 1000);
+    expect(p.grounded).toBe(true);
+
+    // Press Down for one frame to trigger drop-through.
+    const down = noInput();
+    down.down = true;
+    down.downPressed = true;
+    stepPlayer(p, down, [FLOOR, ONE_WAY], [], 1000);
+    // Now release down and let physics fall a bit.
+    for (let i = 0; i < 30; i++) {
+      stepPlayer(p, noInput(), [FLOOR, ONE_WAY], [], 1000);
+    }
+    // Player has fallen below the one-way platform and landed on the FLOOR.
+    expect(p.y + p.h).toBeCloseTo(FLOOR.y, 0);
+  });
+
+  it('does not get pushed sideways by a one-way platform when walking through it', () => {
+    // Place player overlapping the platform horizontally but at the same Y
+    // (i.e., walking through from the side). One-way should not resolve X.
+    const p = makePlayer(80, ONE_WAY.y - 88); // bottom at platform top, x to the left
+    p.prevY = p.y;
+    p.grounded = true;
+    const right = noInput();
+    right.right = true;
+    // Walk into the platform horizontally for many frames.
+    for (let i = 0; i < 60; i++) stepPlayer(p, right, [FLOOR, ONE_WAY], [], 1000);
+    // The player should have moved well past the platform's left edge — one-way
+    // platforms don't block horizontal motion.
+    expect(p.x).toBeGreaterThan(80);
   });
 });
 
