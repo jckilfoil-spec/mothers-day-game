@@ -36,7 +36,7 @@ export const characterManagerScreen: Screen = (root, nav) => {
     ]),
     grid,
     el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
-      'Add as many as you like — Mom, Dad, the cat, Quinn. Tap a card to play with that one.',
+      'Add as many as you like — Mom, Dad, Quinn, the cat, the fish. Tap a card to play with that one.',
     ]),
   ]);
 

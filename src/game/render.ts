@@ -508,42 +508,98 @@ export function paintCarScene(ctx: CanvasRenderingContext2D, opts: SceneOpts): v
 /** Goal: shark's tooth on a small driftwood pedestal. */
 export function paintSharkTooth(ctx: CanvasRenderingContext2D, x: number, y: number, t: number): void {
   ctx.save();
-  // Soft glow
+  // Soft white glow halo around the tooth
   const pulse = 0.85 + 0.15 * Math.sin(t * 0.004);
-  const rg = ctx.createRadialGradient(x, y - 14, 0, x, y - 14, 50 * pulse);
-  rg.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+  const rg = ctx.createRadialGradient(x, y - 28, 0, x, y - 28, 60 * pulse);
+  rg.addColorStop(0, 'rgba(255, 255, 255, 0.65)');
   rg.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = rg;
   ctx.beginPath();
-  ctx.arc(x, y - 14, 50 * pulse, 0, Math.PI * 2);
+  ctx.arc(x, y - 28, 60 * pulse, 0, Math.PI * 2);
   ctx.fill();
 
   // Driftwood pedestal
   ctx.fillStyle = '#8B5E3C';
-  ctx.fillRect(x - 22, y, 44, 8);
+  ctx.fillRect(x - 26, y, 52, 8);
   ctx.fillStyle = '#5C3A28';
-  ctx.fillRect(x - 22, y + 6, 44, 2);
+  ctx.fillRect(x - 26, y + 6, 52, 2);
 
-  // Shark tooth — white triangle with shaded inner edge
+  // === Shark tooth ===
+  // Real shark teeth: dark "root" at the base (twin lobes), curved enamel crown
+  // tapering to a point with serrated edges. Slight asymmetric lean for character.
+
+  // Root (broader brown base, two lobes)
+  ctx.fillStyle = '#9E8568';
+  ctx.beginPath();
+  ctx.moveTo(x - 14, y - 4);
+  ctx.quadraticCurveTo(x - 16, y - 16, x - 6, y - 16);
+  ctx.lineTo(x + 6, y - 16);
+  ctx.quadraticCurveTo(x + 16, y - 16, x + 14, y - 4);
+  ctx.quadraticCurveTo(x + 4, y - 1, x, y - 6);
+  ctx.quadraticCurveTo(x - 4, y - 1, x - 14, y - 4);
+  ctx.closePath();
+  ctx.fill();
+  // Root shadow (darker right lobe)
+  ctx.fillStyle = '#7C6A52';
+  ctx.beginPath();
+  ctx.moveTo(x + 2, y - 16);
+  ctx.lineTo(x + 6, y - 16);
+  ctx.quadraticCurveTo(x + 16, y - 16, x + 14, y - 4);
+  ctx.quadraticCurveTo(x + 8, y - 2, x + 5, y - 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Crown (white enamel, curved, leans slightly left at the tip)
   ctx.fillStyle = '#FFFEF8';
   ctx.beginPath();
-  ctx.moveTo(x, y - 36);
-  ctx.lineTo(x + 13, y);
-  ctx.lineTo(x - 13, y);
+  ctx.moveTo(x - 14, y - 14);
+  // Left edge — gently curved up to the leaning tip
+  ctx.bezierCurveTo(x - 18, y - 28, x - 8, y - 42, x - 2, y - 50);
+  // Tip
+  ctx.quadraticCurveTo(x + 1, y - 51, x + 3, y - 50);
+  // Right edge — sharper curve back down
+  ctx.bezierCurveTo(x + 12, y - 40, x + 16, y - 26, x + 14, y - 14);
   ctx.closePath();
   ctx.fill();
-  // Shaded left
+
+  // Inner shading (right side darker — light comes from upper-left)
   ctx.fillStyle = '#E0DACA';
   ctx.beginPath();
-  ctx.moveTo(x, y - 36);
-  ctx.lineTo(x - 13, y);
-  ctx.lineTo(x - 4, y);
+  ctx.moveTo(x + 14, y - 14);
+  ctx.bezierCurveTo(x + 16, y - 26, x + 12, y - 40, x + 3, y - 50);
+  ctx.lineTo(x + 1, y - 50);
+  ctx.bezierCurveTo(x + 6, y - 38, x + 10, y - 24, x + 6, y - 14);
   ctx.closePath();
   ctx.fill();
-  // Tiny serration sparkle
+
+  // Serrations — small notches on both edges, evenly spaced
+  ctx.strokeStyle = '#C9C2AE';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const t = 0.18 + i * 0.16;
+    // Left edge points (approximate quadratic of the bezier)
+    const lx = x - 14 + (-4) * Math.sin(t * Math.PI) - t * 12;
+    const ly = y - 14 - t * 36;
+    ctx.moveTo(lx, ly);
+    ctx.lineTo(lx + 2, ly + 1);
+    // Right edge points
+    const rx = x + 14 - (-2) * Math.sin(t * Math.PI) - t * 11;
+    const ry = y - 14 - t * 36;
+    ctx.moveTo(rx, ry);
+    ctx.lineTo(rx - 2, ry + 1);
+  }
+  ctx.stroke();
+
+  // Sparkle shimmer near the tip
   ctx.fillStyle = '#FFFFFF';
-  ctx.globalAlpha = 0.9 * pulse;
-  ctx.fillRect(x - 4, y - 22, 2, 5);
+  ctx.globalAlpha = 0.95 * pulse;
+  ctx.beginPath();
+  ctx.arc(x - 3, y - 38, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(x - 3.5, y - 41, 1, 6);
+  ctx.fillRect(x - 6, y - 38, 6, 1);
+
   ctx.restore();
 }
 
