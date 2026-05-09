@@ -19,7 +19,9 @@ npx vitest run tests/physics.test.ts
 npx vitest run -t "honors jump-buffer"
 ```
 
-`npm run build` runs `tsc --noEmit` first, so a successful `build` implies a clean typecheck. The whole production bundle is ~13KB JS / ~3.5KB CSS gzipped.
+`npm run build` runs `tsc --noEmit` first, so a successful `build` implies a clean typecheck. The whole production bundle is ~19KB JS / ~4KB CSS gzipped.
+
+Deployment: pushes to `main` auto-deploy to GitHub Pages via `.github/workflows/pages.yml`. Live at `https://jckilfoil-spec.github.io/mothers-day-game/`.
 
 ## Architecture
 
