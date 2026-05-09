@@ -1,0 +1,64 @@
+/* Design tokens — derived from brand.md.
+   These are the only color/spacing values used in the app; everything composes from here. */
+
+:root {
+  /* Mountain palette (Air Nomad) */
+  --c-mtn-sky-top: #b8d8e8;
+  --c-mtn-sky-horizon: #fbefd9;
+  --c-mtn-sunset: #f4a56c;
+  --c-mtn-far-peaks: #8b7aa8;
+  --c-mtn-near-peaks: #6b8cae;
+  --c-mtn-snow: #fafafa;
+  --c-mtn-rock: #7d7068;
+
+  /* Cave palette (Earth Kingdom) */
+  --c-cave-deep: #2a1f1a;
+  --c-cave-wall: #5c3a28;
+  --c-cave-stalactite: #8b5e3c;
+  --c-cave-crystal: #6fb5a8;
+  --c-cave-crystal-hi: #a8e6dc;
+  --c-cave-torch: #ffb870;
+  --c-cave-moss: #4a6b3a;
+
+  /* UI palette (shared) */
+  --c-primary: #f4a56c;
+  --c-primary-hover: #e89554;
+  --c-secondary-bg: #fbefd9;
+  --c-secondary-text: #5c3a28;
+  --c-card: #fffef8;
+  --c-text: #2a1f1a;
+  --c-text-muted: #7d7068;
+  --c-danger: #c75d5d;
+  --c-success: #7ba888;
+
+  /* Backgrounds */
+  --bg-app: linear-gradient(180deg, #b8d8e8 0%, #fbefd9 100%);
+
+  /* Typography */
+  --font-display: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-accent: 'Caveat', 'Comic Sans MS', cursive;
+
+  /* Sizing */
+  --r-sm: 8px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 14px rgba(42, 31, 26, 0.08), 0 1px 3px rgba(42, 31, 26, 0.06);
+  --shadow-card-hover: 0 12px 28px rgba(42, 31, 26, 0.14), 0 2px 4px rgba(42, 31, 26, 0.08);
+  --shadow-button: 0 4px 0 rgba(232, 149, 84, 0.55), 0 6px 14px rgba(42, 31, 26, 0.18);
+
+  /* Motion */
+  --ease-bouncy: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+}

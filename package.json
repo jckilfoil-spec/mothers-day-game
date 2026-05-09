@@ -1,0 +1,28 @@
+{
+  "name": "mothers-day-game",
+  "private": false,
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "A warm, painted-style platformer where a kid uploads a photo of mom and watches her become the hero of her own little adventure. Built for Mother's Day.",
+  "homepage": "https://github.com/jckilfoil-spec/mothers-day-game",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jckilfoil-spec/mothers-day-game"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4",
+    "jsdom": "^25.0.1",
+    "@types/node": "^22.9.0"
+  }
+}

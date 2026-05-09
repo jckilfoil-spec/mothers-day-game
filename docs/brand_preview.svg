@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 240" role="img" aria-label="A Game for Mom — painted mountain sunrise">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#B8D8E8"/>
+      <stop offset="70%" stop-color="#FBEFD9"/>
+      <stop offset="100%" stop-color="#F8E1B5"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.7" cy="0.5" r="0.45">
+      <stop offset="0%" stop-color="#F4A56C" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#F4A56C" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#F4A56C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="720" height="240" fill="url(#sky)"/>
+  <rect width="720" height="240" fill="url(#sun)"/>
+  <!-- Far peaks -->
+  <path d="M0 165 L60 150 L120 160 L180 130 L240 155 L320 120 L380 145 L460 110 L540 140 L620 125 L720 150 L720 240 L0 240 Z" fill="#8B7AA8" opacity="0.55"/>
+  <!-- Mid peaks -->
+  <path d="M0 185 L80 170 L160 180 L230 155 L310 175 L400 140 L480 170 L560 150 L640 175 L720 165 L720 240 L0 240 Z" fill="#6B8CAE" opacity="0.85"/>
+  <!-- Snow caps overlay -->
+  <path d="M310 175 L400 140 L420 144 L405 152 L395 150 L380 158 L360 162 L335 178 Z" fill="#FAFAFA" opacity="0.55"/>
+  <path d="M460 110 L500 142 L490 147 L475 138 L470 133 Z" fill="#FAFAFA" opacity="0.6"/>
+  <!-- Near silhouette -->
+  <path d="M0 215 L100 195 L200 215 L290 180 L380 210 L470 190 L560 215 L640 200 L720 220 L720 240 L0 240 Z" fill="#5A6F87" opacity="0.92"/>
+  <!-- Title -->
+  <text x="48" y="80" font-family="Fredoka, sans-serif" font-size="36" font-weight="700" fill="#2A1F1A">A Game for Mom</text>
+  <text x="48" y="108" font-family="Caveat, cursive" font-size="22" fill="#5C3A28">a tiny adventure, painted with love</text>
+</svg>
