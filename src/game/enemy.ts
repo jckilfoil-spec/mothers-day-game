@@ -71,6 +71,20 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: EnemyState, t: numbe
   ctx.globalAlpha = defeatFade;
   ctx.scale(defeatScale, defeatScale);
 
+  // Red "danger / clickable" glow halo behind every enemy. Pulses gently for life.
+  if (e.defeatT === 0) {
+    const glowR = Math.max(e.w, e.h) * 0.85;
+    const pulse = 0.32 + 0.12 * Math.sin(t * 0.005 + e.x * 0.1);
+    const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
+    rg.addColorStop(0, `rgba(199, 93, 93, ${pulse})`);
+    rg.addColorStop(0.55, `rgba(199, 93, 93, ${pulse * 0.45})`);
+    rg.addColorStop(1, 'rgba(199, 93, 93, 0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // Body wobble
   const wobble = Math.sin(t * 0.005 + e.x * 0.1) * 1.5;
   const bodyW = e.w / 2;
@@ -107,7 +121,7 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: EnemyState, t: numbe
 
   ctx.restore();
 
-  // HP bar
+  // HP bar (only after first hit)
   if (e.defeatT === 0 && e.hp < e.maxHp) {
     const barW = e.w;
     const barH = 6;
@@ -121,6 +135,38 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: EnemyState, t: numbe
     ctx.fillStyle = pct > 0.5 ? '#7BA888' : pct > 0.2 ? '#F4A56C' : '#C75D5D';
     roundedRect(ctx, bx, by, barW * pct, barH, 3);
     ctx.fill();
+    ctx.restore();
+  }
+
+  // "Click me!" chevron above untouched enemies — gentle bob. Once hit, the HP bar
+  // takes over the same slot, so the visual gracefully hands off.
+  if (e.defeatT === 0 && e.hp === e.maxHp) {
+    const ax = e.x + e.w / 2;
+    const ay = e.y - 18 + Math.sin(t * 0.008 + e.x * 0.05) * 3;
+    ctx.save();
+    // Drop shadow for contrast against any background
+    ctx.fillStyle = 'rgba(42, 31, 26, 0.4)';
+    ctx.beginPath();
+    ctx.moveTo(ax - 8, ay - 7 + 1.5);
+    ctx.lineTo(ax + 8, ay - 7 + 1.5);
+    ctx.lineTo(ax, ay + 1.5);
+    ctx.closePath();
+    ctx.fill();
+    // Chevron body — bright yellow, points down at the enemy
+    ctx.fillStyle = '#FBC34A';
+    ctx.beginPath();
+    ctx.moveTo(ax - 8, ay - 7);
+    ctx.lineTo(ax + 8, ay - 7);
+    ctx.lineTo(ax, ay);
+    ctx.closePath();
+    ctx.fill();
+    // Top highlight stroke for definition
+    ctx.strokeStyle = '#FFFEF8';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(ax - 6, ay - 6);
+    ctx.lineTo(ax + 6, ay - 6);
+    ctx.stroke();
     ctx.restore();
   }
 

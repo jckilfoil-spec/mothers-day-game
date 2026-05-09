@@ -67,6 +67,9 @@ export class Game {
   /** Multiplier applied to the world rendering. 1.0 on phones; up to ~1.5 on desktop —
    *  scales sprites and platforms larger so wider screens don't make the action tiny. */
   private worldScale = 1;
+  /** Whether the device exposes a coarse pointer (touch). Affects HUD margins so the
+   *  on-screen movement buttons don't cover the progress-bar timer. */
+  private isTouch = false;
 
   private running = false;
   private rafId = 0;
@@ -147,6 +150,9 @@ export class Game {
     // leave the action looking tiny. Mobile (anything ≤ ~800px wide) stays at 1.0,
     // preserving the mobile-native baseline. Cap at 1.5 to keep proportions sane.
     this.worldScale = Math.max(1, Math.min(1.5, w / 900));
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      this.isTouch = window.matchMedia('(pointer: coarse)').matches;
+    }
     this.canvas.width = w * this.dpr;
     this.canvas.height = h * this.dpr;
     this.canvas.style.width = w + 'px';
@@ -384,7 +390,10 @@ export class Game {
     const { w, h } = this.viewport;
     const barX = w - 32;
     const topMargin = 110; // leave room for the HUD chip / mute / pause
-    const bottomMargin = 90; // leave room for touch controls / banner
+    // On touch devices the on-screen Left/Right/Down/Jump cluster eats the bottom
+    // ~100px. Push the progress-bar bottom up enough that the time + percentage
+    // labels never sit behind those buttons.
+    const bottomMargin = this.isTouch ? 170 : 90;
     const barY = topMargin;
     const barW = 14;
     const barH = Math.max(120, h - topMargin - bottomMargin);
