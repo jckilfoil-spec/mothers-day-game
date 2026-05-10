@@ -130,13 +130,13 @@ export const winScreen: Screen = (root, nav, route) => {
   // inside it). Position: fixed in CSS so it stays at the bottom of the screen
   // on any viewport: visible on small phones, out of the way on tall desktops.
   const sourceLink = el('a', {
-    class: 'win__source',
+    class: 'source-link',
     href: 'https://github.com/jckilfoil-spec/mothers-day-game',
     target: '_blank',
     rel: 'noopener',
   }, [
-    el('span', { class: 'win__source-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
-    el('span', { class: 'win__source-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
+    el('span', { class: 'source-link-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
+    el('span', { class: 'source-link-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
   ]);
 
   const wrap = el('div', { class: 'win' }, [confettiWrap, card, sourceLink]);
