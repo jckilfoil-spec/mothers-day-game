@@ -46,6 +46,9 @@ export interface EnemyState {
   /** Wall-clock ms (performance.now) for the next scheduled action. Seagulls use this for
    *  poop drops. Undefined for variants that don't schedule. */
   nextActionAt?: number;
+  /** When true, this seagull does NOT drop poop. Used by the sky-beach prototype
+   *  to keep upper-cloud-layer gulls cosmetic — only ground-level birds rain. */
+  noPoop?: boolean;
   emoji: string;
 }
 

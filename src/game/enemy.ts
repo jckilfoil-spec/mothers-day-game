@@ -71,13 +71,14 @@ export function drawEnemy(ctx: CanvasRenderingContext2D, e: EnemyState, t: numbe
   ctx.globalAlpha = defeatFade;
   ctx.scale(defeatScale, defeatScale);
 
-  // Red "danger / clickable" glow halo behind every enemy. Pulses gently for life.
+  // Red "danger / clickable" glow halo behind every enemy. Pulses noticeably so
+  // first-time players can spot what's clickable from across the screen.
   if (e.defeatT === 0) {
-    const glowR = Math.max(e.w, e.h) * 0.85;
-    const pulse = 0.32 + 0.12 * Math.sin(t * 0.005 + e.x * 0.1);
+    const glowR = Math.max(e.w, e.h) * 1.15;
+    const pulse = 0.55 + 0.22 * Math.sin(t * 0.006 + e.x * 0.1);
     const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
-    rg.addColorStop(0, `rgba(199, 93, 93, ${pulse})`);
-    rg.addColorStop(0.55, `rgba(199, 93, 93, ${pulse * 0.45})`);
+    rg.addColorStop(0, `rgba(255, 95, 95, ${pulse})`);
+    rg.addColorStop(0.45, `rgba(232, 80, 80, ${pulse * 0.6})`);
     rg.addColorStop(1, 'rgba(199, 93, 93, 0)');
     ctx.fillStyle = rg;
     ctx.beginPath();
