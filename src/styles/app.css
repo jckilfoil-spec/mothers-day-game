@@ -1623,57 +1623,42 @@ body.force-touch .controls-banner { display: none; }
 /* Open-source / fork-it nudge below the gameplay-loop buttons. Two-line layout:
    the human pitch on top, the bare URL underneath so it reads as a real GitHub
    link (not just a button label). */
-/* ---------- Win-screen "fork it" source link ----------
-   Pinned to the viewport bottom on the win screen only. Visible on small
-   phones, out-of-the-way on tall desktops where the card otherwise centers
-   in the middle of the page and any in-card link would float mid-screen. */
+/* ---------- "Fork it" source link ----------
+   Pinned to the viewport bottom on title + win screens. Single line so the
+   touch target stays tight; uses --c-text (not muted) for legibility against
+   varied scene paint behind it. */
 .source-link {
   position: fixed;
   bottom: max(var(--s-3), env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  color: var(--c-text-muted);
+  color: var(--c-text);
   text-decoration: none;
   text-align: center;
-  opacity: 0.75;
-  padding: 4px 12px;
+  opacity: 1;
+  padding: 6px 14px;
   transition: opacity 120ms ease, color 120ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 .source-link-line1 {
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 0.85rem;
-  line-height: 1.1;
-}
-.source-link-url {
-  font-size: 0.72rem;
-  color: var(--c-text-muted);
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.9rem;
   line-height: 1.1;
 }
 @media (hover: hover) and (pointer: fine) {
   .source-link:hover {
-    opacity: 1;
     color: var(--c-primary);
   }
-  .source-link:hover .source-link-url { color: var(--c-primary); }
 }
 .source-link:focus-visible {
   outline: 3px solid var(--c-primary);
   outline-offset: 2px;
-  opacity: 1;
   border-radius: var(--r-sm);
 }
-/* Drop the URL line on small screens so the touch target stays tight. */
 @media (max-width: 600px) {
-  .source-link-url { display: none; }
-  .source-link-line1 { font-size: 0.78rem; }
+  .source-link-line1 { font-size: 0.8rem; }
 }
 
 /* ---------- Helpers ---------- */

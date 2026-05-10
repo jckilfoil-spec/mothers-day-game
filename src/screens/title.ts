@@ -37,7 +37,6 @@ export const titleScreen: Screen = (root, nav) => {
     rel: 'noopener',
   }, [
     el('span', { class: 'source-link-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
-    el('span', { class: 'source-link-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
   ]);
 
   const wrap = el('div', { class: 'title' }, [bg, content, sourceLink]);
