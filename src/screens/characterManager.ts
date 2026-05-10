@@ -8,6 +8,7 @@ import {
   type Character,
 } from '../state.js';
 import { sfx } from '../audio/sounds.js';
+import { track } from '../analytics.js';
 
 /** Character manager — grid of cards with add / edit / delete / select. */
 export const characterManagerScreen: Screen = (root, nav) => {
@@ -139,6 +140,7 @@ function characterCard(
           e.stopPropagation();
           confirmDelete(c, () => {
             deleteCharacter(c.id);
+            track('character_deleted', { character_id: c.id });
             rerender();
           });
         },

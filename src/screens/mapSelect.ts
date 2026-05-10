@@ -8,6 +8,7 @@ import {
 } from '../game/render.js';
 import { getSelectedCharacter, setLastMap, type MapId } from '../state.js';
 import { sfx } from '../audio/sounds.js';
+import { track, bumpAttempt } from '../analytics.js';
 
 /** Map Select screen — two big tiles. */
 export const mapSelectScreen: Screen = (root, nav) => {
@@ -17,12 +18,17 @@ export const mapSelectScreen: Screen = (root, nav) => {
     return;
   }
 
-  const chip = el('div', { class: 'character-chip' }, [
-    character.faceImage
-      ? el('img', { src: character.faceImage, alt: character.name })
-      : el('div', { class: 'character-chip__placeholder' }, ['🙂']),
-    el('span', {}, [character.name]),
+  // .mapselect-meta is the flex wrapper; .hero-chip shrinks (so the name
+  // ellipsizes) while .change-link stays at flex: 0 0 auto and never clips.
+  const chip = el('div', { class: 'mapselect-meta' }, [
+    el('div', { class: 'hero-chip character-chip' }, [
+      character.faceImage
+        ? el('img', { class: 'face', src: character.faceImage, alt: character.name })
+        : el('div', { class: 'face character-chip__placeholder' }, ['🙂']),
+      el('span', { class: 'name' }, [character.name]),
+    ]),
     el('button', {
+      class: 'change-link',
       onclick: () => {
         sfx.click();
         nav({ name: 'characters' });
@@ -40,6 +46,12 @@ export const mapSelectScreen: Screen = (root, nav) => {
   function go(m: MapId): void {
     setLastMap(m);
     sfx.click();
+    const attempt = bumpAttempt(m);
+    track('level_started', {
+      level_id: m,
+      level_name: m,
+      attempt_number: attempt,
+    });
     nav({ name: 'game', map: m });
   }
 

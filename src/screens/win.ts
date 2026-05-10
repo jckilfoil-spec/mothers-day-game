@@ -4,6 +4,7 @@ import { getSelectedCharacter } from '../state.js';
 import { Confetti } from '../util/confetti.js';
 import { sfx } from '../audio/sounds.js';
 import { formatTime } from '../util/time.js';
+import { track } from '../analytics.js';
 
 const SHARE_URL = 'https://jckilfoil-spec.github.io/mothers-day-game/';
 const SHARE_TITLE = "Happy Mother's Day! 💌";
@@ -20,6 +21,14 @@ export const winScreen: Screen = (root, nav, route) => {
     nav({ name: 'characters' });
     return;
   }
+
+  // Final celebration screen — emit `game_finished` once per win render.
+  // We approximate `total_duration_ms` with the per-level elapsed since the codebase
+  // doesn't track multi-level sessions; `levels_completed` is always 1 per run.
+  track('game_finished', {
+    total_duration_ms: elapsedMs ?? 0,
+    levels_completed: 1,
+  });
 
   const confettiCanvas = el('canvas', {}) as HTMLCanvasElement;
   const confettiWrap = el('div', { class: 'win__confetti' }, [confettiCanvas]);
@@ -38,6 +47,7 @@ export const winScreen: Screen = (root, nav, route) => {
         window.prompt('Copy this link:', SHARE_URL);
         return;
       }
+      track('share_link_copied');
       copyBtn.textContent = '✓ Copied!';
       copyBtn.classList.add('win__share-btn--copied');
       window.clearTimeout(copyResetTimer);
@@ -58,6 +68,7 @@ export const winScreen: Screen = (root, nav, route) => {
             sfx.click();
             try {
               await navigator.share({ title: SHARE_TITLE, text: SHARE_TEXT, url: SHARE_URL });
+              track('share_native_used');
             } catch {
               // User canceled — no-op. Don't surface AbortError.
             }
@@ -109,6 +120,18 @@ export const winScreen: Screen = (root, nav, route) => {
           nav({ name: 'characters' });
         },
       }, ['Pick someone else']),
+    ]),
+    // Open-source nudge — sits below the gameplay-loop buttons so it doesn't
+    // compete with the celebration moment, but high-conversion since this is
+    // when someone thinks "I want to make one for my mom too."
+    el('a', {
+      class: 'win__source',
+      href: 'https://github.com/jckilfoil-spec/mothers-day-game',
+      target: '_blank',
+      rel: 'noopener',
+    }, [
+      el('span', { class: 'win__source-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
+      el('span', { class: 'win__source-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
     ]),
   ]);
 

@@ -9,6 +9,7 @@ import {
 } from '../state.js';
 import { cropFaceToDataUrl, fileToDataUrl, loadImage } from '../util/face.js';
 import { sfx } from '../audio/sounds.js';
+import { track } from '../analytics.js';
 
 /**
  * Add/Edit a character.
@@ -310,9 +311,14 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
                 ...(croppedDataUrl !== editing.faceImage ? { faceImage: croppedDataUrl } : {}),
               });
               selectCharacter(editing.id);
+              track('character_updated', { character_id: editing.id });
             } else {
               const c = addCharacter({ name, faceImage: croppedDataUrl, customMessage: message });
               selectCharacter(c.id);
+              track('character_created', {
+                character_id: c.id,
+                has_photo: croppedDataUrl !== null,
+              });
             }
             sfx.click();
             nav({ name: 'characters' });
