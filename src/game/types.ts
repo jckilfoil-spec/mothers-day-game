@@ -16,7 +16,7 @@ export interface Rect {
 
 export interface Platform extends Rect {
   /** Optional cosmetic variant for rendering. */
-  variant?: 'rock' | 'ledge';
+  variant?: 'rock' | 'ledge' | 'cloud';
   /** When true, only collides on the way down — players can jump up through it
    *  (no head-bonk) and drop down through it by pressing the down key. */
   oneWay?: boolean;

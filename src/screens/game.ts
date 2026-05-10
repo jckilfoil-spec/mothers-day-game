@@ -6,12 +6,12 @@ import {
   makeCarLevel,
   makeCaveLevel,
   makeMountainLevel,
+  makeSkyBeachLevel,
 } from '../game/levels.js';
-import { getSelectedCharacter } from '../state.js';
+import { getSelectedCharacter, getSettings, setControlsBannerDismissed } from '../state.js';
 import { sfx, unlock } from '../audio/sounds.js';
 import { openSettings } from './settings.js';
 import { track, currentAttempt } from '../analytics.js';
-import { openControlsSheet } from './controlsSheet.js';
 
 /** Game screen — fullscreen canvas with HUD overlay. */
 export const gameScreen: Screen = (root, nav, route) => {
@@ -32,10 +32,12 @@ export const gameScreen: Screen = (root, nav, route) => {
   // its own per-level timer (in elapsedMs) but it doesn't start until first input,
   // so for "abandoned at the menu before moving" we need our own anchor.
   const startedAt = Date.now();
+  const difficulty = getSettings().prototypeDifficulty;
   const level =
     mapId === 'mountain' ? makeMountainLevel()
     : mapId === 'cave' ? makeCaveLevel()
     : mapId === 'beach' ? makeBeachLevel()
+    : mapId === 'sky-beach' ? makeSkyBeachLevel(difficulty)
     : makeCarLevel();
 
   const canvas = el('canvas', {}) as HTMLCanvasElement;
@@ -104,42 +106,37 @@ export const gameScreen: Screen = (root, nav, route) => {
     el('div', { class: 'game-hud__buttons' }, [gearBtn]),
   ]);
 
-  const bannerCloseBtn = el('button', {
-    class: 'controls-banner__close',
-    title: 'Got it',
-    'aria-label': 'Dismiss controls hint',
-  }, ['×']);
-  // The `?` opens the deeper kbd matrix in a modal — keeps the always-on banner
-  // tight enough to fit on a 320px-wide phone alongside the explicit close.
-  const moreBtn = el('button', {
-    class: 'controls-banner__more',
-    'aria-label': 'More controls',
-    title: 'More controls',
-    onclick: () => {
+  // Banner is suppressed permanently once the user dismisses it (controls live
+  // in gear ▸ Controls after that). Only build the DOM if not yet dismissed.
+  let banner: HTMLElement | null = null;
+  if (!getSettings().controlsBannerDismissed) {
+    const bannerCloseBtn = el('button', {
+      class: 'controls-banner__close',
+      title: 'Got it',
+      'aria-label': 'Dismiss controls hint',
+    }, ['×']);
+    banner = el('div', { class: 'controls-banner' }, [
+      el('span', { class: 'controls-banner__row' }, [
+        el('span', { class: 'group' }, [
+          el('kbd', {}, ['◀']), el('kbd', {}, ['▶']), ' move',
+        ]),
+        el('span', { class: 'group' }, [
+          el('kbd', {}, ['Space']), ' jump',
+        ]),
+        el('span', { class: 'group' }, [
+          el('kbd', {}, ['↓']), ' drop',
+        ]),
+      ]),
+      bannerCloseBtn,
+    ]);
+    const bannerEl = banner;
+    bannerCloseBtn.addEventListener('click', () => {
       sfx.click();
-      openControlsSheet();
-    },
-  }, ['?']);
-  const banner = el('div', { class: 'controls-banner' }, [
-    el('span', { class: 'controls-banner__row' }, [
-      el('span', { class: 'group' }, [
-        el('kbd', {}, ['◀']), el('kbd', {}, ['▶']), ' move',
-      ]),
-      el('span', { class: 'group' }, [
-        el('kbd', {}, ['Space']), ' jump',
-      ]),
-      el('span', { class: 'group' }, [
-        el('kbd', {}, ['↓']), ' drop',
-      ]),
-    ]),
-    moreBtn,
-    bannerCloseBtn,
-  ]);
-  bannerCloseBtn.addEventListener('click', () => {
-    sfx.click();
-    banner.classList.add('is-fading');
-    setTimeout(() => banner.remove(), 250);
-  });
+      setControlsBannerDismissed(true);
+      bannerEl.classList.add('is-fading');
+      setTimeout(() => bannerEl.remove(), 250);
+    });
+  }
 
   const touchControls = el('div', { class: 'touch-controls' }, [
     el('div', { class: 'touch-cluster' }, [
@@ -155,6 +152,12 @@ export const gameScreen: Screen = (root, nav, route) => {
   const wrap = el('div', { class: 'game-wrap' }, [stage, hud, banner, touchControls]);
   mount(root, wrap);
 
+  const isPrototype = mapId === 'sky-beach';
+  const maxHp = isPrototype
+    ? (difficulty === 'easy' ? 20 : difficulty === 'medium' ? 10 : 5)
+    : undefined;
+  const killGoal = isPrototype && difficulty === 'hard' ? 50 : undefined;
+
   const game = new Game(
     canvas,
     {
@@ -162,6 +165,13 @@ export const gameScreen: Screen = (root, nav, route) => {
       faceImage: character.faceImage,
       characterName: character.name,
       characterId: character.id,
+      ...(isPrototype && {
+        difficulty,
+        forceDeathMode: true,
+        dontDeleteOnLivesOut: true,
+        maxHp,
+        killGoal,
+      }),
     },
     {
       onWin: (elapsedMs) => {

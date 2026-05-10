@@ -2,6 +2,7 @@
 
 import { Router, type Cleanup, type Route } from './router.js';
 import { track, recordScreenTransition } from './analytics.js';
+import { getSettings } from './state.js';
 import { titleScreen } from './screens/title.js';
 import { characterManagerScreen } from './screens/characterManager.js';
 import { characterEditorScreen } from './screens/characterEditor.js';
@@ -15,6 +16,14 @@ import { winScreen } from './screens/win.js';
 if (new URLSearchParams(location.search).get('touch') === '1') {
   document.body.classList.add('force-touch');
 }
+
+// Apply persisted a11y body classes before first paint so users with
+// reduce-motion / high-contrast / larger-text don't see a flash of motion or
+// small text on initial load.
+const initialSettings = getSettings();
+if (initialSettings.reduceMotion) document.body.classList.add('reduce-motion');
+if (initialSettings.highContrast) document.body.classList.add('hc');
+if (initialSettings.largeText) document.body.classList.add('lg-text');
 
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app root element');

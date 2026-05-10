@@ -1,6 +1,6 @@
 import type { Screen } from '../router.js';
 import { el, mount } from '../util/dom.js';
-import { getSelectedCharacter } from '../state.js';
+import { getSelectedCharacter, getSettings } from '../state.js';
 import { Confetti } from '../util/confetti.js';
 import { sfx } from '../audio/sounds.js';
 import { formatTime } from '../util/time.js';
@@ -95,7 +95,10 @@ export const winScreen: Screen = (root, nav, route) => {
           el('span', { class: 'win__time-value' }, [formatTime(elapsedMs)]),
         ])
       : null,
-    el('p', { class: 'win__msg' }, [character.customMessage]),
+    el('div', { class: 'win__whisper' }, [
+      el('span', { class: 'win__whisper-kid', 'aria-hidden': 'true' }, ['🧒']),
+      el('p', { class: 'win__msg' }, [character.customMessage]),
+    ]),
     shareRow,
     el('p', { class: 'win__hint' }, ['Take a beat. Then —']),
     el('div', { class: 'win__buttons' }, [
@@ -146,17 +149,22 @@ export const winScreen: Screen = (root, nav, route) => {
   sizeConfetti();
   window.addEventListener('resize', sizeConfetti);
 
+  // Confetti is the showpiece motion on the win screen. With `reduceMotion`
+  // on (or OS prefers-reduced-motion), instantiate the engine for cleanup
+  // parity but skip the burst + the recurring rain timer so the canvas
+  // stays still.
   const confetti = new Confetti(confettiCanvas);
-  // Initial burst from the center
-  setTimeout(() => {
-    confetti.burst(window.innerWidth / 2, window.innerHeight / 2 - 60, 80, { spread: Math.PI * 2, power: 9 });
-  }, 60);
-  // Slow rain afterwards
-  const rainTimer = window.setInterval(() => confetti.rain(), 200);
+  let rainTimer = 0;
+  if (!getSettings().reduceMotion) {
+    setTimeout(() => {
+      confetti.burst(window.innerWidth / 2, window.innerHeight / 2 - 60, 80, { spread: Math.PI * 2, power: 9 });
+    }, 60);
+    rainTimer = window.setInterval(() => confetti.rain(), 200);
+  }
 
   return () => {
     confetti.destroy();
-    window.clearInterval(rainTimer);
+    if (rainTimer) window.clearInterval(rainTimer);
     window.clearTimeout(copyResetTimer);
     window.removeEventListener('resize', sizeConfetti);
   };

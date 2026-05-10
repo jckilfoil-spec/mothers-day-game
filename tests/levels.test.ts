@@ -4,6 +4,7 @@ import {
   makeCarLevel,
   makeCaveLevel,
   makeMountainLevel,
+  makeSkyBeachLevel,
 } from '../src/game/levels.js';
 import { reachedGoal, stepPlayer, makePlayer, respawnIfFell } from '../src/game/physics.js';
 import type { InputState } from '../src/game/types.js';
@@ -137,5 +138,67 @@ describe('reachedGoal works for horizontal levels', () => {
     const lvl = makeCarLevel();
     const p = makePlayer(lvl.goal.x - 22, lvl.goal.y - 60);
     expect(reachedGoal(p, lvl.goal.x, lvl.goal.y)).toBe(true);
+  });
+});
+
+describe('makeSkyBeachLevel', () => {
+  it('is 2800x2400 with sand floor and horizontal progress', () => {
+    const lvl = makeSkyBeachLevel('easy');
+    expect(lvl.width).toBe(2800);
+    expect(lvl.height).toBe(2400);
+    expect(lvl.scrollDir).toBe(0);
+    expect(lvl.progressAxis).toBe('x');
+    expect(lvl.map).toBe('sky-beach');
+  });
+
+  it('places the player on or above the sand floor at start', () => {
+    const lvl = makeSkyBeachLevel('easy');
+    const floorY = lvl.height - 32;
+    expect(lvl.playerStart.y).toBeLessThanOrEqual(floorY);
+    expect(lvl.playerStart.x).toBeGreaterThanOrEqual(0);
+    expect(lvl.playerStart.x).toBeLessThan(lvl.width);
+  });
+
+  it('places the goal on the floor at the right side', () => {
+    const lvl = makeSkyBeachLevel('easy');
+    const floorY = lvl.height - 32;
+    expect(lvl.goal.x).toBeGreaterThan(lvl.width * 0.9);
+    // Goal sits within ~100px of the sand floor.
+    expect(lvl.goal.y).toBeGreaterThanOrEqual(floorY - 100);
+    expect(lvl.goal.y).toBeLessThanOrEqual(floorY);
+  });
+
+  it('all elevated cloud platforms have variant=cloud and oneWay=true', () => {
+    const lvl = makeSkyBeachLevel('medium');
+    const floorY = lvl.height - 32;
+    const clouds = lvl.platforms.filter((p) => p.y < floorY);
+    expect(clouds.length).toBeGreaterThan(0);
+    expect(clouds.every((p) => p.variant === 'cloud')).toBe(true);
+    expect(clouds.every((p) => p.oneWay === true)).toBe(true);
+  });
+
+  it('all enemies are within world bounds', () => {
+    const lvl = makeSkyBeachLevel('hard');
+    expect(lvl.enemies.length).toBeGreaterThan(0);
+    for (const e of lvl.enemies) {
+      expect(e.x).toBeGreaterThanOrEqual(0);
+      expect(e.x + e.w).toBeLessThanOrEqual(lvl.width);
+      expect(e.y).toBeGreaterThanOrEqual(0);
+      expect(e.y + e.h).toBeLessThanOrEqual(lvl.height);
+    }
+  });
+
+  it('enemy count strictly increases with difficulty', () => {
+    const easy = makeSkyBeachLevel('easy');
+    const medium = makeSkyBeachLevel('medium');
+    const hard = makeSkyBeachLevel('hard');
+    expect(easy.enemies.length).toBeLessThan(medium.enemies.length);
+    expect(medium.enemies.length).toBeLessThan(hard.enemies.length);
+  });
+
+  it('has hot-sand hazards on the ground', () => {
+    const lvl = makeSkyBeachLevel('easy');
+    expect(lvl.hazards.length).toBeGreaterThan(0);
+    expect(lvl.hazards.every((h) => h.variant === 'hot-sand')).toBe(true);
   });
 });

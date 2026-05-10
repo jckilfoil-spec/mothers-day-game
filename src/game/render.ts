@@ -34,6 +34,12 @@ const C = {
   caveCrystalHi: '#A8E6DC',
   caveTorch: '#FFB870',
   caveMoss: '#4A6B3A',
+  // Sky-beach palette: high-altitude sky-blue + soft pink horizon for the cloud climb
+  skyHigh: '#7CB8E0',
+  skyMid: '#B5DAF0',
+  skyPink: '#FBD3D3',
+  cloudWhite: '#FFFEF8',
+  cloudShadow: '#D8E4F0',
 };
 
 /** Soft-edged blob — the watercolor primitive. */
@@ -344,6 +350,54 @@ function roundedBlob(
   ctx.closePath();
 }
 
+/**
+ * Cloud platform — soft-blob cloud the player can stand on. The visual top
+ * (where the hero will land) is at `y`. Multiple overlapping ellipses give
+ * a fluffy painterly feel; a faint shadow underneath sells the volume.
+ * Optional `t` (performance.now ms) drives a subtle ±1px vertical bobble.
+ */
+export function paintCloudPlatform(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  t?: number,
+): void {
+  ctx.save();
+
+  // Subtle bobble — phase keyed off x so neighboring clouds don't sync up.
+  const bob = t !== undefined ? Math.sin(t * 0.0018 + x * 0.013) * 1 : 0;
+  const cy = y + h / 2 + bob;
+  const cx = x + w / 2;
+  const rx = w / 2;
+  const ry = h / 2;
+
+  // Faint underside shadow — sits below the cloud body
+  ctx.fillStyle = 'rgba(42, 31, 26, 0.14)';
+  ctx.beginPath();
+  ctx.ellipse(cx, y + h + 3, rx * 0.78, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Bottom shading lobe — slightly cooler, gives the cloud weight
+  softBlob(ctx, cx, cy + ry * 0.35, rx * 0.95, ry * 0.85, C.cloudShadow, 0.55);
+  softBlob(ctx, cx - rx * 0.5, cy + ry * 0.4, rx * 0.55, ry * 0.7, C.cloudShadow, 0.45);
+  softBlob(ctx, cx + rx * 0.5, cy + ry * 0.4, rx * 0.55, ry * 0.7, C.cloudShadow, 0.45);
+
+  // Main body — three overlapping white blobs. Vertical centers are pulled
+  // upward so the visual top of the cloud lands near `y`.
+  const topY = y + ry * 0.55 + bob;
+  softBlob(ctx, cx, topY, rx * 0.95, ry * 0.95, C.cloudWhite, 0.92);
+  softBlob(ctx, cx - rx * 0.55, topY + ry * 0.18, rx * 0.6, ry * 0.78, C.cloudWhite, 0.85);
+  softBlob(ctx, cx + rx * 0.55, topY + ry * 0.18, rx * 0.6, ry * 0.78, C.cloudWhite, 0.85);
+
+  // Highlight puffs — small bright caps near the visual top
+  softBlob(ctx, cx - rx * 0.25, topY - ry * 0.25, rx * 0.32, ry * 0.4, '#FFFFFF', 0.7);
+  softBlob(ctx, cx + rx * 0.32, topY - ry * 0.18, rx * 0.28, ry * 0.34, '#FFFFFF', 0.55);
+
+  ctx.restore();
+}
+
 /** Goal flag (mountain). */
 export function paintFlag(ctx: CanvasRenderingContext2D, x: number, y: number, t: number): void {
   ctx.save();
@@ -422,6 +476,127 @@ export function paintBeachScene(ctx: CanvasRenderingContext2D, opts: SceneOpts):
     const py = h * 0.62;
     paintPalm(ctx, px, py, 0.6 + i * 0.08);
   }
+}
+
+/**
+ * Sky-beach scene — vertical-extended beach.
+ *
+ * At high scrollY (camera near the bottom, ~2400) the viewport reads as the
+ * existing beach scene: sandy/cream sky with soft horizon. As scrollY
+ * decreases (camera climbs toward 0), it transitions to a clear sky-blue
+ * with cloud blobs and a hint of pink along the horizon band.
+ */
+export function paintSkyBeachScene(ctx: CanvasRenderingContext2D, opts: SceneOpts): void {
+  const { width: w, height: h } = opts;
+  const scrollY = opts.scrollY ?? 0;
+  const scrollX = opts.scrollX ?? 0;
+  const seed = opts.seed ?? 53;
+
+  // climb: 0 at the floor (scrollY ~= 2400), 1 near the top (scrollY ~= 0)
+  const climb = Math.max(0, Math.min(1, 1 - scrollY / 2400));
+
+  // Sky gradient — interpolate beach-warm toward high-altitude blue + pink horizon
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  // Top stop: from beach-blue at floor toward deep sky-blue up high
+  g.addColorStop(0, lerpColor('#A8DFEB', C.skyHigh, climb));
+  // Mid stop: from cream beach toward soft mid-blue
+  g.addColorStop(0.55, lerpColor('#FBEFD9', C.skyMid, climb));
+  // Bottom stop: from warm sand toward pink horizon hint
+  g.addColorStop(1, lerpColor('#FFE0B5', C.skyPink, climb));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  // Sun — fades out as we climb (it sits low over the beach)
+  const sunAlpha = 1 - climb * 0.6;
+  if (sunAlpha > 0.05) {
+    const sunX = w * 0.78;
+    const sunY = h * 0.22;
+    const sunR = Math.min(w, h) * 0.16;
+    const rg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, sunR);
+    rg.addColorStop(0, `rgba(255, 220, 120, ${0.95 * sunAlpha})`);
+    rg.addColorStop(0.5, `rgba(255, 184, 112, ${0.4 * sunAlpha})`);
+    rg.addColorStop(1, 'rgba(255, 184, 112, 0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  // Ocean band — only visible near the floor (climb < 0.45)
+  if (climb < 0.45) {
+    const oceanAlpha = 1 - climb / 0.45;
+    const oceanY = h * 0.62;
+    const oceanH = h * 0.18;
+    ctx.save();
+    ctx.globalAlpha = oceanAlpha;
+    const og = ctx.createLinearGradient(0, oceanY, 0, oceanY + oceanH);
+    og.addColorStop(0, '#5BA8B8');
+    og.addColorStop(1, '#2E6878');
+    ctx.fillStyle = og;
+    ctx.fillRect(0, oceanY, w, oceanH);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    const r = rng(seed);
+    for (let i = 0; i < 14; i++) {
+      const fx = (r() * w * 1.5 + scrollX * 0.05) % w;
+      const fy = oceanY + r() * oceanH * 0.85;
+      ctx.fillRect(fx, fy, 22, 1.5);
+    }
+    ctx.restore();
+  }
+
+  // Pink horizon band — most visible mid-climb, fades at extremes
+  const horizonAlpha = Math.sin(climb * Math.PI) * 0.5;
+  if (horizonAlpha > 0.05) {
+    const hg = ctx.createLinearGradient(0, h * 0.55, 0, h * 0.95);
+    hg.addColorStop(0, `rgba(251, 211, 211, 0)`);
+    hg.addColorStop(0.5, `rgba(251, 211, 211, ${horizonAlpha})`);
+    hg.addColorStop(1, `rgba(255, 200, 180, 0)`);
+    ctx.fillStyle = hg;
+    ctx.fillRect(0, h * 0.55, w, h * 0.4);
+  }
+
+  // Clouds — fade in as we climb. Distributed across the viewport,
+  // with parallax driven by both scrollX and a slow vertical drift.
+  const cloudAlpha = Math.min(1, climb * 1.4);
+  if (cloudAlpha > 0.05) {
+    const r = rng(seed + 1);
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const baseX = ((r() * w * 1.6 + scrollX * (0.05 + i * 0.02)) % (w + 240)) - 120;
+      const baseY = h * (0.08 + r() * 0.7);
+      const len = 70 + r() * 110;
+      const ht = 14 + r() * 10;
+      softBlob(ctx, baseX, baseY, len, ht, C.cloudWhite, 0.6 * cloudAlpha);
+      softBlob(ctx, baseX - len * 0.3, baseY + ht * 0.4, len * 0.7, ht * 0.7, C.cloudWhite, 0.42 * cloudAlpha);
+      softBlob(ctx, baseX + len * 0.4, baseY + ht * 0.2, len * 0.6, ht * 0.65, C.cloudWhite, 0.42 * cloudAlpha);
+    }
+  }
+
+  // Distant palms only at the floor (climb < 0.25)
+  if (climb < 0.25) {
+    const palmAlpha = 1 - climb / 0.25;
+    ctx.save();
+    ctx.globalAlpha = palmAlpha;
+    for (let i = 0; i < 4; i++) {
+      const px = (i * w * 0.35 + 60 + scrollX * 0.2) % (w + 200) - 100;
+      const py = h * 0.62;
+      paintPalm(ctx, px, py, 0.6 + i * 0.08);
+    }
+    ctx.restore();
+  }
+}
+
+/** Linear-interpolate two #RRGGBB hex colors. t is clamped 0..1. */
+function lerpColor(a: string, b: string, t: number): string {
+  const tt = Math.max(0, Math.min(1, t));
+  const ar = parseInt(a.slice(1, 3), 16);
+  const ag = parseInt(a.slice(3, 5), 16);
+  const ab = parseInt(a.slice(5, 7), 16);
+  const br = parseInt(b.slice(1, 3), 16);
+  const bg = parseInt(b.slice(3, 5), 16);
+  const bb = parseInt(b.slice(5, 7), 16);
+  const r = Math.round(ar + (br - ar) * tt);
+  const g = Math.round(ag + (bg - ag) * tt);
+  const bl = Math.round(ab + (bb - ab) * tt);
+  return `rgb(${r}, ${g}, ${bl})`;
 }
 
 function paintPalm(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number): void {

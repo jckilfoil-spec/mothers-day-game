@@ -41,7 +41,8 @@ export type AnalyticsEvent =
   | 'feedback_button_clicked'
   | 'feedback_submitted'
   | 'share_link_copied'
-  | 'share_native_used';
+  | 'share_native_used'
+  | 'difficulty_picked';
 
 /** Send an analytics event. No-op if PostHog isn't initialized (pre-consent or declined). */
 export function track(event: AnalyticsEvent, props?: Record<string, unknown>): void {

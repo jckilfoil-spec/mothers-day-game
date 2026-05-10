@@ -25,6 +25,7 @@ import {
   paintBeachScene,
   paintCar,
   paintCarScene,
+  paintCloudPlatform,
   paintGoalParticles,
   paintPoop,
   paintCaveScene,
@@ -35,6 +36,7 @@ import {
   paintMountainScene,
   paintRockPlatform,
   paintSharkTooth,
+  paintSkyBeachScene,
 } from './render.js';
 import type { LevelData, PlayerState } from './types.js';
 import { sfx, stopAmbient } from '../audio/sounds.js';
@@ -46,6 +48,7 @@ import {
   getSelectedCharacter,
   getSettings,
   loseLife,
+  type Difficulty,
 } from '../state.js';
 
 function clamp(min: number, max: number, v: number): number {
@@ -58,6 +61,16 @@ export interface GameOpts {
   faceImage: string | null;
   characterName: string;
   characterId: string;
+  /** Open-world prototype only. */
+  difficulty?: Difficulty;
+  /** When set, the goal is inert until `this.kills >= killGoal`. Hard-mode gate. */
+  killGoal?: number;
+  /** Treat death mode as ON regardless of `getSettings().deathMode`. */
+  forceDeathMode?: boolean;
+  /** On lives-out, respawn at full lives instead of deleting the character. */
+  dontDeleteOnLivesOut?: boolean;
+  /** Override the default 5 HP per life. Easy=20, Medium=10, Hard=5. */
+  maxHp?: number;
 }
 
 export interface GameCallbacks {
@@ -107,14 +120,24 @@ export class Game {
 
   // ---- Death mode ----
   private characterId: string;
-  /** Maximum HP per life when death mode is on. */
-  private readonly maxHp = 5;
+  /** Maximum HP per life when death mode is on. Defaults to 5; overridable via opts.maxHp. */
+  private maxHp = 5;
   /** Current HP. Only used while settings.deathMode is true. */
   private hp = 5;
   /** Death animation counter (frames). 0 = alive. > 0 = animating, frozen. */
   private dyingT = 0;
   /** Cached current lives (read from character record on init / after death). */
   private livesLeft = 3;
+
+  // ---- Prototype-only opts (no-op defaults) ----
+  /** When true, treat death mode as on regardless of saved settings. */
+  private forceDeathMode = false;
+  /** When set, reachedGoal is gated until `this.kills >= killGoal`. */
+  private killGoal: number | undefined;
+  /** When true, lives-out respawns at full lives instead of deleting the character. */
+  private dontDeleteOnLivesOut = false;
+  /** Running enemy-defeat count for the kill-goal HUD + gate. */
+  private kills = 0;
 
   constructor(canvas: HTMLCanvasElement, opts: GameOpts, callbacks: GameCallbacks) {
     this.canvas = canvas;
@@ -128,6 +151,13 @@ export class Game {
     // Pull current lives from the character record; default to 3 if unset.
     const c = getCharacter(this.characterId);
     this.livesLeft = c?.livesLeft ?? 3;
+
+    // Open-world prototype options (no-op defaults preserve legacy 4-map behavior).
+    if (opts.maxHp !== undefined) this.maxHp = opts.maxHp;
+    this.hp = this.maxHp;
+    this.forceDeathMode = opts.forceDeathMode === true;
+    this.killGoal = opts.killGoal;
+    this.dontDeleteOnLivesOut = opts.dontDeleteOnLivesOut === true;
 
     this.input = new Input(canvas, (cx, cy) => this.handleClick(cx, cy));
 
@@ -213,7 +243,10 @@ export class Game {
       sfx.hit();
       this.player.attackT = 15;
       this.player.facing = wx > this.player.x + this.player.w / 2 ? 1 : -1;
-      if (hit.hp === 0) sfx.defeat();
+      if (hit.hp === 0) {
+        sfx.defeat();
+        this.kills++;
+      }
     }
   }
 
@@ -267,10 +300,16 @@ export class Game {
     const remaining = loseLife(this.characterId);
     this.livesLeft = remaining;
     if (remaining <= 0) {
-      // Character is gone forever.
-      deleteCharacter(this.characterId);
-      this.callbacks.onCharacterLost?.();
-      return;
+      if (this.dontDeleteOnLivesOut) {
+        // Open-world prototype: keep the character record intact and just bump
+        // in-memory lives back to 3. Do NOT persist via state.
+        this.livesLeft = 3;
+      } else {
+        // Character is gone forever.
+        deleteCharacter(this.characterId);
+        this.callbacks.onCharacterLost?.();
+        return;
+      }
     }
     // Respawn at start with full HP and a brief invincibility window.
     this.player.x = this.level.playerStart.x;
@@ -380,18 +419,22 @@ export class Game {
     if (bounced) {
       if (bounced.variant === 'car') sfx.honk();
       else sfx.ouch();
-      if (getSettings().deathMode) {
+      if (this.forceDeathMode || getSettings().deathMode) {
         this.hp = Math.max(0, this.hp - 1);
         if (this.hp === 0) this.startDying();
       }
     }
     respawnIfFell(this.player, this.level.platforms, this.level.height);
     if (reachedGoal(this.player, this.level.goal.x, this.level.goal.y)) {
-      this.won = true;
-      this.winT = 0;
-      this.completedAt = performance.now();
-      sfx.win();
-      stopAmbient();
+      // Open-world prototype kill-goal gate: ignore the goal until enough kills.
+      const gated = this.killGoal !== undefined && this.kills < this.killGoal;
+      if (!gated) {
+        this.won = true;
+        this.winT = 0;
+        this.completedAt = performance.now();
+        sfx.win();
+        stopAmbient();
+      }
     }
     this.updateCamera();
   }
@@ -434,6 +477,9 @@ export class Game {
       case 'car':
         paintCarScene(ctx, { ...sceneOpts, seed: 17 });
         break;
+      case 'sky-beach':
+        paintSkyBeachScene(ctx, { ...sceneOpts, seed: 64 });
+        break;
     }
 
     // World transform — scale up on bigger screens, then offset by the camera.
@@ -442,12 +488,20 @@ export class Game {
     ctx.scale(this.worldScale, this.worldScale);
     ctx.translate(-this.camera.x, -this.camera.y);
 
+    const t = performance.now();
+
     // Platforms
     for (const p of this.level.platforms) {
-      paintRockPlatform(ctx, p.x, p.y, p.w, p.h, this.level.map);
+      if (p.variant === 'cloud') {
+        paintCloudPlatform(ctx, p.x, p.y, p.w, p.h, t);
+      } else {
+        // paintRockPlatform's variant union doesn't include 'sky-beach' — fall back
+        // to 'beach' style sand floors for sky-beach's solid ground.
+        const rockVariant =
+          this.level.map === 'sky-beach' ? 'beach' : this.level.map;
+        paintRockPlatform(ctx, p.x, p.y, p.w, p.h, rockVariant);
+      }
     }
-
-    const t = performance.now();
 
     // Hazards (under enemies, over platforms — they're floor-level)
     for (const hz of this.level.hazards) {
@@ -465,7 +519,9 @@ export class Game {
     }
 
     // Goal — particles emanate first (so the goal sprite paints over the source point cleanly).
-    paintGoalParticles(ctx, this.level.goal.x, this.level.goal.y, this.level.map, t);
+    // paintGoalParticles + drawPlayer don't know about 'sky-beach' — reuse beach palette.
+    const legacyMap = this.level.map === 'sky-beach' ? 'beach' : this.level.map;
+    paintGoalParticles(ctx, this.level.goal.x, this.level.goal.y, legacyMap, t);
     switch (this.level.map) {
       case 'mountain':
         paintFlag(ctx, this.level.goal.x, this.level.goal.y, t);
@@ -479,6 +535,9 @@ export class Game {
       case 'car':
         paintHouse(ctx, this.level.goal.x, this.level.goal.y, t);
         break;
+      case 'sky-beach':
+        paintSharkTooth(ctx, this.level.goal.x, this.level.goal.y, t);
+        break;
     }
 
     // Enemies
@@ -489,7 +548,7 @@ export class Game {
     // Player
     drawPlayer(ctx, this.player, {
       faceImage: this.faceImg,
-      variant: this.level.map,
+      variant: legacyMap,
       hurtT: this.player.hurtT,
     });
 
@@ -499,7 +558,10 @@ export class Game {
     this.drawProgressBar();
 
     // Death-mode HUD: hearts + lives count, top-center.
-    if (getSettings().deathMode) this.drawDeathModeHud();
+    if (this.forceDeathMode || getSettings().deathMode) this.drawDeathModeHud();
+
+    // Kill-goal HUD (open-world prototype only). Always visible when set.
+    if (this.killGoal !== undefined) this.drawKillHud();
 
     // Death animation overlay — red wash that ramps up while dying.
     if (this.dyingT > 0) {
@@ -525,6 +587,34 @@ export class Game {
       ctx.fillStyle = `rgba(255,254,248,${k})`;
       ctx.fillRect(0, 0, w, h);
     }
+  }
+
+  /** Top-left "⚔ kills/killGoal" pill for the open-world prototype. */
+  private drawKillHud(): void {
+    if (this.killGoal === undefined) return;
+    const { ctx } = this;
+    const label = `⚔ ${this.kills}/${this.killGoal}`;
+    ctx.save();
+    ctx.font = '700 14px Fredoka, system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const textW = ctx.measureText(label).width;
+    const padX = 12;
+    const padY = 6;
+    const pillH = 14 + padY * 2;
+    const pillW = textW + padX * 2;
+    // Top-left margin — leaves the top-center hearts HUD untouched.
+    const pillLeft = 14;
+    const pillTop = 14;
+    ctx.fillStyle = 'rgba(42, 31, 26, 0.85)';
+    roundedRect(ctx, pillLeft, pillTop, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 254, 248, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#FFFEF8';
+    ctx.fillText(label, pillLeft + padX, pillTop + pillH / 2);
+    ctx.restore();
   }
 
   /** Hearts (current HP) + lives count, top-center. Only called when deathMode is on. */
@@ -712,6 +802,7 @@ function goalColor(map: string): string {
     case 'mountain': return '#F4A56C';
     case 'cave': return '#6FB5A8';
     case 'beach': return '#5BA8B8';
+    case 'sky-beach': return '#5BA8B8';
     case 'car': return '#C75D5D';
     default: return '#F4A56C';
   }
@@ -722,6 +813,7 @@ function goalEmoji(map: string): string {
     case 'mountain': return '🚩';
     case 'cave': return '💎';
     case 'beach': return '🦈';
+    case 'sky-beach': return '🦈';
     case 'car': return '🏠';
     default: return '★';
   }

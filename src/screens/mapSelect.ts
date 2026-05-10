@@ -5,10 +5,12 @@ import {
   paintCaveScene,
   paintBeachScene,
   paintCarScene,
+  paintSkyBeachScene,
 } from '../game/render.js';
 import { getSelectedCharacter, setLastMap, type MapId } from '../state.js';
 import { sfx } from '../audio/sounds.js';
 import { track, bumpAttempt } from '../analytics.js';
+import { openDifficultyModal } from './difficultyModal.js';
 
 /** Map Select screen — two big tiles. */
 export const mapSelectScreen: Screen = (root, nav) => {
@@ -43,6 +45,25 @@ export const mapSelectScreen: Screen = (root, nav) => {
     mapTile('car', 'Drive Home', 'Dodge phones and cars. Get home to family.', () => go('car')),
   ];
 
+  // Open-world prototype tile — opens difficulty modal first; nav happens after pick.
+  const prototypeTiles: HTMLElement[] = [
+    mapTile(
+      'sky-beach',
+      'Open Beach (Beta)',
+      'Climb 5 cloud layers above the surf. Death mode on, pick your difficulty.',
+      () => {
+        sfx.click();
+        openDifficultyModal({
+          onPick: (difficulty) => {
+            track('difficulty_picked', { difficulty, level_id: 'sky-beach' });
+            go('sky-beach');
+          },
+        });
+      },
+      /* badge */ 'Beta',
+    ),
+  ];
+
   function go(m: MapId): void {
     setLastMap(m);
     sfx.click();
@@ -68,10 +89,15 @@ export const mapSelectScreen: Screen = (root, nav) => {
       el('h1', {}, ['Meet me at our special place.']),
       el('div', { style: 'margin-left:auto' }, [chip]),
     ]),
-    el('div', { class: 'map-select' }, tiles),
-    el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
+    el('p', { class: 'muted text-center mapselect-sub' }, [
       'I can only tell you there. Pick the one you want.',
     ]),
+    el('div', { class: 'map-select' }, tiles),
+    el('div', { class: 'mapselect-section' }, [
+      el('span', { class: 'mapselect-section__title' }, ['✨ Open World']),
+      el('span', { class: 'mapselect-section__sub' }, ['experimental — bigger maps, pick your difficulty']),
+    ]),
+    el('div', { class: 'map-select map-select--prototype' }, prototypeTiles),
   ]);
 
   mount(root, wrap);
@@ -103,18 +129,24 @@ export const mapSelectScreen: Screen = (root, nav) => {
         case 'car':
           paintCarScene(ctx, { width: w, height: h, seed: 17 });
           break;
+        case 'sky-beach':
+          paintSkyBeachScene(ctx, { width: w, height: h, seed: 64 });
+          break;
       }
     });
   }
 };
 
-function mapTile(map: MapId, title: string, sub: string, onClick: () => void): HTMLElement {
+function mapTile(map: MapId, title: string, sub: string, onClick: () => void, badge?: string): HTMLElement {
   return el('button', {
-    class: 'map-tile',
+    class: 'map-tile' + (badge ? ' map-tile--badged' : ''),
     'data-map': map,
     onclick: onClick,
   }, [
-    el('div', { class: 'map-tile__art' }, [el('canvas', {})]),
+    el('div', { class: 'map-tile__art' }, [
+      el('canvas', {}),
+      badge ? el('span', { class: 'map-tile__badge' }, [badge]) : null,
+    ]),
     el('div', { class: 'map-tile__body' }, [
       el('h3', { class: 'map-tile__title' }, [title]),
       el('p', { class: 'map-tile__sub' }, [sub]),
