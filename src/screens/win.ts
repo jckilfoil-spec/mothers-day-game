@@ -124,18 +124,8 @@ export const winScreen: Screen = (root, nav, route) => {
         },
       }, ['Pick someone else']),
     ]),
-    // Open-source nudge — sits below the gameplay-loop buttons so it doesn't
-    // compete with the celebration moment, but high-conversion since this is
-    // when someone thinks "I want to make one for my mom too."
-    el('a', {
-      class: 'win__source',
-      href: 'https://github.com/jckilfoil-spec/mothers-day-game',
-      target: '_blank',
-      rel: 'noopener',
-    }, [
-      el('span', { class: 'win__source-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
-      el('span', { class: 'win__source-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
-    ]),
+    // The "fork it" CTA is now a global bottom-of-screen footer — see main.ts.
+    // Removing the in-card duplicate so it doesn't sit mid-card on desktop.
   ]);
 
   const wrap = el('div', { class: 'win' }, [confettiWrap, card]);

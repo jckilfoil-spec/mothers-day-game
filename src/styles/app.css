@@ -1641,43 +1641,58 @@ body.force-touch .controls-banner { display: none; }
 /* Open-source / fork-it nudge below the gameplay-loop buttons. Two-line layout:
    the human pitch on top, the bare URL underneath so it reads as a real GitHub
    link (not just a button label). */
-.win__source {
-  display: block;
-  margin-top: var(--s-5);
-  color: var(--c-secondary-text);
+/* ---------- Global "fork it" source footer ----------
+   Pinned to the bottom of every non-gameplay screen via main.ts. Hidden during
+   gameplay so it doesn't compete with the canvas HUD. */
+.site-source {
+  position: fixed;
+  bottom: max(var(--s-3), env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  color: var(--c-text-muted);
   text-decoration: none;
   text-align: center;
-  opacity: 0.85;
+  opacity: 0.75;
+  padding: 4px 12px;
   transition: opacity 120ms ease, color 120ms ease;
   -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
 }
-.win__source-line1 {
-  display: block;
+.site-source__line {
+  font-family: var(--font-display);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  line-height: 1.1;
 }
-.win__source-url {
-  display: block;
-  font-size: 0.8rem;
+.site-source__url {
+  font-size: 0.72rem;
   color: var(--c-text-muted);
-  margin-top: 2px;
   font-variant-numeric: tabular-nums;
-  word-break: break-all;
+  line-height: 1.1;
 }
 @media (hover: hover) and (pointer: fine) {
-  .win__source:hover {
+  .site-source:hover {
     opacity: 1;
     color: var(--c-primary);
   }
-  .win__source:hover .win__source-url {
-    color: var(--c-primary);
-  }
+  .site-source:hover .site-source__url { color: var(--c-primary); }
 }
-.win__source:focus-visible {
+.site-source:focus-visible {
   outline: 3px solid var(--c-primary);
-  outline-offset: 3px;
+  outline-offset: 2px;
   opacity: 1;
   border-radius: var(--r-sm);
+}
+/* Hide during gameplay (canvas HUD owns the bottom edge). */
+body.gameplay-active .site-source { display: none; }
+@media (max-width: 600px) {
+  .site-source__url { display: none; }
+  .site-source__line { font-size: 0.78rem; }
 }
 
 /* ---------- Helpers ---------- */
