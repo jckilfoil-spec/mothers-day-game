@@ -319,26 +319,8 @@ body.gameplay-active .feedback-btn { display: none; }
 
 /* Open-source link below the Start button. Subtle so it reads as credentials,
    not a CTA that competes with Start. */
-.title__source {
-  margin-top: var(--s-2);
-  color: var(--c-secondary-text);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 500;
-  opacity: 0.75;
-  transition: opacity 120ms ease;
-  -webkit-tap-highlight-color: transparent;
-}
-@media (hover: hover) and (pointer: fine) {
-  .title__source:hover {
-    opacity: 1;
-  }
-}
-.title__source:focus-visible {
-  outline: 3px solid var(--c-primary);
-  outline-offset: 4px;
-  opacity: 1;
-}
+/* (.title__source replaced by the shared .source-link below — pinned to the
+   viewport bottom on every screen that opts in.) */
 
 @keyframes bounceIn {
   0% { transform: scale(0.6); opacity: 0; }
@@ -1645,7 +1627,7 @@ body.force-touch .controls-banner { display: none; }
    Pinned to the viewport bottom on the win screen only. Visible on small
    phones, out-of-the-way on tall desktops where the card otherwise centers
    in the middle of the page and any in-card link would float mid-screen. */
-.win__source {
+.source-link {
   position: fixed;
   bottom: max(var(--s-3), env(safe-area-inset-bottom));
   left: 50%;
@@ -1663,26 +1645,26 @@ body.force-touch .controls-banner { display: none; }
   transition: opacity 120ms ease, color 120ms ease;
   -webkit-tap-highlight-color: transparent;
 }
-.win__source-line1 {
+.source-link-line1 {
   font-family: var(--font-display);
   font-weight: 600;
   font-size: 0.85rem;
   line-height: 1.1;
 }
-.win__source-url {
+.source-link-url {
   font-size: 0.72rem;
   color: var(--c-text-muted);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 @media (hover: hover) and (pointer: fine) {
-  .win__source:hover {
+  .source-link:hover {
     opacity: 1;
     color: var(--c-primary);
   }
-  .win__source:hover .win__source-url { color: var(--c-primary); }
+  .source-link:hover .source-link-url { color: var(--c-primary); }
 }
-.win__source:focus-visible {
+.source-link:focus-visible {
   outline: 3px solid var(--c-primary);
   outline-offset: 2px;
   opacity: 1;
@@ -1690,8 +1672,8 @@ body.force-touch .controls-banner { display: none; }
 }
 /* Drop the URL line on small screens so the touch target stays tight. */
 @media (max-width: 600px) {
-  .win__source-url { display: none; }
-  .win__source-line1 { font-size: 0.78rem; }
+  .source-link-url { display: none; }
+  .source-link-line1 { font-size: 0.78rem; }
 }
 
 /* ---------- Helpers ---------- */

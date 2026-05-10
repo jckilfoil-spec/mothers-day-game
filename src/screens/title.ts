@@ -26,15 +26,21 @@ export const titleScreen: Screen = (root, nav) => {
     el('h1', { class: 'title__main bounce-in' }, ['A Game for Mom']),
     el('p', { class: 'title__sub bounce-in' }, ["Press Start when you're ready."]),
     startBtn,
-    el('a', {
-      class: 'title__source',
-      href: 'https://github.com/jckilfoil-spec/mothers-day-game',
-      target: '_blank',
-      rel: 'noopener',
-    }, ['✨ open source — fork on github']),
   ]);
 
-  const wrap = el('div', { class: 'title' }, [bg, content]);
+  // Source link — pinned to the viewport bottom (sibling of content, fixed-pos).
+  // Same pattern as the win screen: visible on small phones, out-of-the-way on tall desktops.
+  const sourceLink = el('a', {
+    class: 'source-link',
+    href: 'https://github.com/jckilfoil-spec/mothers-day-game',
+    target: '_blank',
+    rel: 'noopener',
+  }, [
+    el('span', { class: 'source-link-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
+    el('span', { class: 'source-link-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
+  ]);
+
+  const wrap = el('div', { class: 'title' }, [bg, content, sourceLink]);
   mount(root, wrap);
 
   // Paint background, animate gentle parallax
