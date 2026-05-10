@@ -124,11 +124,22 @@ export const winScreen: Screen = (root, nav, route) => {
         },
       }, ['Pick someone else']),
     ]),
-    // The "fork it" CTA is now a global bottom-of-screen footer — see main.ts.
-    // Removing the in-card duplicate so it doesn't sit mid-card on desktop.
   ]);
 
-  const wrap = el('div', { class: 'win' }, [confettiWrap, card]);
+  // "Fork it" CTA — pinned to the viewport bottom (sibling of the card, not
+  // inside it). Position: fixed in CSS so it stays at the bottom of the screen
+  // on any viewport: visible on small phones, out of the way on tall desktops.
+  const sourceLink = el('a', {
+    class: 'win__source',
+    href: 'https://github.com/jckilfoil-spec/mothers-day-game',
+    target: '_blank',
+    rel: 'noopener',
+  }, [
+    el('span', { class: 'win__source-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
+    el('span', { class: 'win__source-url' }, ['github.com/jckilfoil-spec/mothers-day-game']),
+  ]);
+
+  const wrap = el('div', { class: 'win' }, [confettiWrap, card, sourceLink]);
   mount(root, wrap);
 
   // Resize the confetti canvas to fit
