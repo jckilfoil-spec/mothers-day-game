@@ -5,12 +5,10 @@ import {
   paintCaveScene,
   paintBeachScene,
   paintCarScene,
-  paintSkyBeachScene,
 } from '../game/render.js';
 import { getSelectedCharacter, setLastMap, type MapId } from '../state.js';
 import { sfx } from '../audio/sounds.js';
 import { track, bumpAttempt } from '../analytics.js';
-import { openDifficultyModal } from './difficultyModal.js';
 
 /** Map Select screen — two big tiles. */
 export const mapSelectScreen: Screen = (root, nav) => {
@@ -39,27 +37,20 @@ export const mapSelectScreen: Screen = (root, nav) => {
   ]);
 
   const tiles: HTMLElement[] = [
+    mapTile('beach', 'Hunt for Sharkteeth!', 'Avoid hot sand. Find the shark tooth at the end.', () => go('beach')),
     mapTile('mountain', 'Hike the Mountain!', 'Climb to the flag at the top.', () => go('mountain')),
     mapTile('cave', 'Go Spelunking!', 'Dig down to the glowing crystal below.', () => go('cave')),
-    mapTile('beach', 'Hunt for Sharkteeth!', 'Avoid hot sand. Find the shark tooth at the end.', () => go('beach')),
     mapTile('car', 'Drive Home', 'Dodge phones and cars. Get home to family.', () => go('car')),
   ];
 
-  // Open-world prototype tile — opens difficulty modal first; nav happens after pick.
+  // Open-world prototype tile — straight to play. Difficulty is settings-only
+  // (easter egg in gear ▸ Open World 🌴) so map entry stays one tap.
   const prototypeTiles: HTMLElement[] = [
     mapTile(
       'sky-beach',
       'Open Beach (Beta)',
-      'Climb 5 cloud layers above the surf. Death mode on, pick your difficulty.',
-      () => {
-        sfx.click();
-        openDifficultyModal({
-          onPick: (difficulty) => {
-            track('difficulty_picked', { difficulty, level_id: 'sky-beach' });
-            go('sky-beach');
-          },
-        });
-      },
+      'Climb cloud layers above the surf. Death mode on.',
+      () => go('sky-beach'),
       /* badge */ 'Beta',
     ),
   ];
@@ -95,15 +86,15 @@ export const mapSelectScreen: Screen = (root, nav) => {
     el('div', { class: 'map-select' }, tiles),
     el('div', { class: 'mapselect-section' }, [
       el('span', { class: 'mapselect-section__title' }, ['✨ Open World']),
-      el('span', { class: 'mapselect-section__sub' }, ['experimental — bigger maps, pick your difficulty']),
+      el('span', { class: 'mapselect-section__sub' }, ['experimental — bigger maps, hidden challenges']),
     ]),
     el('div', { class: 'map-select map-select--prototype' }, prototypeTiles),
   ]);
 
   mount(root, wrap);
 
-  // Paint each preview
-  for (const tile of tiles) {
+  // Paint each preview — both solid tiles and prototype tiles.
+  for (const tile of [...tiles, ...prototypeTiles]) {
     const variant = tile.dataset.map as MapId;
     const canvas = tile.querySelector('canvas') as HTMLCanvasElement | null;
     if (!canvas) continue;
@@ -130,7 +121,9 @@ export const mapSelectScreen: Screen = (root, nav) => {
           paintCarScene(ctx, { width: w, height: h, seed: 17 });
           break;
         case 'sky-beach':
-          paintSkyBeachScene(ctx, { width: w, height: h, seed: 64 });
+          // Preview shows the beach scene (warm + recognizable). The cloud-layer
+          // climb is a surprise on entry. Beta badge signals it's not regular beach.
+          paintBeachScene(ctx, { width: w, height: h, seed: 64 });
           break;
       }
     });

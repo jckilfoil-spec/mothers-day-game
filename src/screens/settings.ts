@@ -16,11 +16,13 @@ import {
   setLargeText,
   setScreenShake,
   setAudioCues,
+  setPrototypeDifficulty,
   toggleUiSection,
   getSelectedCharacter,
   resetLives,
   getCharacters,
   selectCharacter,
+  type Difficulty,
 } from '../state.js';
 import { sfx, setMuted as audioSetMuted, setAudioCues as audioSetAudioCues } from '../audio/sounds.js';
 
@@ -228,6 +230,24 @@ export function openSettings(opts: SettingsOpts): void {
       },
     }));
 
+    // ---- Collapsible: Open World difficulty (easter egg) ----
+    // Per design: don't surface difficulty on map entry; only discoverable here.
+    // Effective only on the sky-beach prototype map; the 4 solid maps ignore it.
+    panel.appendChild(makeCollapsibleSection({
+      id: 'openworld',
+      title: 'Open World 🌴',
+      open: s.uiOpenSections.includes('openworld'),
+      body: makeDifficultyBody(s.prototypeDifficulty, () => {
+        opts.onSettingsChange?.();
+        render();
+      }),
+      onToggle: () => {
+        sfx.click();
+        toggleUiSection('openworld');
+        render();
+      },
+    }));
+
     // ---- Footer actions ----
     panel.appendChild(
       el('div', { class: 'settings-panel__footer' }, [
@@ -374,6 +394,36 @@ function makeA11yBody(
         setAudioCues(next);
         audioSetAudioCues(next);
       },
+    ),
+  ]);
+}
+
+function makeDifficultyBody(current: Difficulty, onChange: () => void): HTMLElement {
+  const opts: { id: Difficulty; title: string; hp: string; flavor: string }[] = [
+    { id: 'easy', title: 'Easy', hp: '20 HP', flavor: 'Stroll the cloud layers. Goal opens whenever you arrive.' },
+    { id: 'medium', title: 'Medium', hp: '10 HP', flavor: '2× enemies. Goal opens whenever you arrive.' },
+    { id: 'hard', title: 'Hard', hp: '5 HP', flavor: '3× enemies. Goal locked until you defeat 50 enemies.' },
+  ];
+  return el('div', { class: 'settings-difficulty' }, [
+    el('p', { class: 'settings-row__hint' }, [
+      'Sky Beach (Beta) only. The 4 solid maps ignore this. Settings change applies on next entry.',
+    ]),
+    ...opts.map((opt) =>
+      el('button', {
+        type: 'button',
+        class: 'difficulty-card' + (opt.id === current ? ' is-last-pick' : ''),
+        onclick: () => {
+          setPrototypeDifficulty(opt.id);
+          sfx.click();
+          onChange();
+        },
+      }, [
+        el('div', { class: 'difficulty-card__head' }, [
+          el('span', { class: 'difficulty-card__title' }, [opt.title]),
+          el('span', { class: 'difficulty-card__hp' }, [opt.hp]),
+        ]),
+        el('p', { class: 'difficulty-card__flavor' }, [opt.flavor]),
+      ]),
     ),
   ]);
 }

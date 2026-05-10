@@ -391,7 +391,7 @@ export class Game {
     // Schedule new seagull poops on a per-bird timer; spawn directly into level.hazards.
     const now = performance.now();
     for (const e of this.level.enemies) {
-      if (e.variant !== 'seagull' || e.defeatT > 0) continue;
+      if (e.variant !== 'seagull' || e.defeatT > 0 || e.noPoop) continue;
       if (e.nextActionAt === undefined) {
         // First scheduling: stagger initial drops so they don't all fire at once.
         e.nextActionAt = now + 1500 + Math.random() * 2500;
