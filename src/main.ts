@@ -28,22 +28,6 @@ if (initialSettings.largeText) document.body.classList.add('lg-text');
 const root = document.getElementById('app');
 if (!root) throw new Error('Missing #app root element');
 
-// Global "fork it" footer — pinned to the bottom of every non-gameplay screen.
-// Was previously inline in the win screen card, but on tall desktop viewports
-// the card centers in the middle of the page, making the link float mid-screen
-// instead of sitting at the bottom where users naturally look for credits.
-{
-  const sourceFooter = document.createElement('a');
-  sourceFooter.className = 'site-source';
-  sourceFooter.href = 'https://github.com/jckilfoil-spec/mothers-day-game';
-  sourceFooter.target = '_blank';
-  sourceFooter.rel = 'noopener';
-  sourceFooter.innerHTML =
-    '<span class="site-source__line">✨ made with ❤ — fork it for YOUR mom</span>' +
-    '<span class="site-source__url">github.com/jckilfoil-spec/mothers-day-game</span>';
-  document.body.appendChild(sourceFooter);
-}
-
 const router = new Router((route, nav): Cleanup => {
   return mountRoute(root, route, nav);
 });
