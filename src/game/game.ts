@@ -589,10 +589,14 @@ export class Game {
     }
   }
 
-  /** Top-left "⚔ kills/killGoal" pill for the open-world prototype. */
+  /** Bottom-left "⚔ kills/killGoal" pill for the open-world prototype.
+   *  Anchored bottom-left and growing rightward so it can't sit behind the
+   *  top-left character chip. On touch devices, raised above the on-screen
+   *  Left/Right/Down/Jump cluster (same convention as drawProgressBar). */
   private drawKillHud(): void {
     if (this.killGoal === undefined) return;
     const { ctx } = this;
+    const { h } = this.viewport;
     const label = `⚔ ${this.kills}/${this.killGoal}`;
     ctx.save();
     ctx.font = '700 14px Fredoka, system-ui, sans-serif';
@@ -603,9 +607,9 @@ export class Game {
     const padY = 6;
     const pillH = 14 + padY * 2;
     const pillW = textW + padX * 2;
-    // Top-left margin — leaves the top-center hearts HUD untouched.
     const pillLeft = 14;
-    const pillTop = 14;
+    const bottomMargin = this.isTouch ? 170 : 14;
+    const pillTop = h - pillH - bottomMargin;
     ctx.fillStyle = 'rgba(42, 31, 26, 0.85)';
     roundedRect(ctx, pillLeft, pillTop, pillW, pillH, pillH / 2);
     ctx.fill();

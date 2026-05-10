@@ -59,7 +59,7 @@ main.ts ─→ Router ─→ screens/* ─→ state.ts (persistence)
 
 ### Coordinate systems
 
-- World: Y increases downward. **Mountain** is 720×2400, player starts near `y≈2280` at the base, goal near `y≈128` at the top, `scrollDir = -1` (climb), `progressAxis = 'y'`. **Cave** is 720×2400, player starts near `y≈-8` at the top opening, goal near `y≈2280` at the bottom, `scrollDir = 1` (descend), `progressAxis = 'y'`. **Beach** and **Car** are 2800×720 horizontals, `scrollDir = 0`, `progressAxis = 'x'`. Both vertical worlds have a solid floor platform at `y = level.height - 32` so falling off mid-game won't trigger respawn — only falling all the way past `y > level.height + 200` does (see `physics.ts:respawnIfFell`).
+- World: Y increases downward. **Mountain** is 720×2400, player starts near `y≈2280` at the base, goal near `y≈128` at the top, `scrollDir = -1` (climb), `progressAxis = 'y'`. **Cave** is 720×2400, player starts near `y≈-8` at the top opening, goal near `y≈2280` at the bottom, `scrollDir = 1` (descend), `progressAxis = 'y'`. **Beach**, **Car**, and **Sky Beach** are 2800×720 horizontals, `scrollDir = 0`, `progressAxis = 'x'`. Both vertical worlds have a solid floor platform at `y = level.height - 32` so falling off mid-game won't trigger respawn — only falling all the way past `y > level.height + 200` does (see `physics.ts:respawnIfFell`).
 - Camera: smooth-follows player with a small lookahead bias (`facing * 100` on X, `scrollDir * -80` on Y), then clamps to world bounds. On viewports wider than the world, the world is centered horizontally. World rendering is also scaled by `worldScale` (1.0 on phones, up to ~1.3 on desktop, multiplied by the user's saved `zoom` setting).
 - Click handling: `Game.handleClick` converts canvas pixels to world coords via `worldScale` *and* the camera, then walks the enemy list. Update both transforms together if you change one.
 
@@ -94,6 +94,29 @@ Off by default; toggled from the in-game gear → settings panel.
 - `loseLife(characterId)` decrements `Character.livesLeft` (default 3) in storage. If it hits 0, `deleteCharacter` runs and `onCharacterLost` callback navigates to the character picker — the character is gone for good. Otherwise the player respawns at `level.playerStart` with full HP and a 60-frame invincibility window.
 - The settings panel surfaces a "Reset {name}'s lives to 3" button when the active character is below 3.
 - Pure SFX/visuals don't run in death mode unless `settings.deathMode` is on — the rest of the game stays whimsy-by-default.
+
+### Sky Beach (the prototype map)
+
+The 4 "solid" maps (Mountain/Cave/Beach/Car) ignore difficulty and run in whimsy mode by default. **Sky Beach is the only map that reads `settings.prototypeDifficulty`** (`'easy' | 'medium' | 'hard'`, persisted across sessions). The branch in `screens/game.ts` flips a bundle of opts only for `mapId === 'sky-beach'`:
+
+- `forceDeathMode: true` — death mode is on regardless of `settings.deathMode`.
+- `dontDeleteOnLivesOut: true` — running out of lives doesn't delete the character (whimsy contract still holds outside this map).
+- `maxHp` — 20 / 10 / 5 by difficulty.
+- `killGoal: 50` only on hard — alternate win condition layered on top of `reachedGoal`.
+
+Some painters/dispatchers don't know about `'sky-beach'` (`paintRockPlatform`, `paintGoalParticles`, `drawPlayer` palette lookups). `game.ts:draw()` falls back to `'beach'` for those — search for `legacyMap` / `rockVariant` to see the pattern. If you add a map with similar reuse, follow the same fallback approach instead of widening every variant union.
+
+### Accessibility settings
+
+`Settings` carries a cluster of a11y/UI flags (added launch night) that affect both DOM and canvas:
+
+- `reduceMotion` — defaults to OS `prefers-reduced-motion`; disables confetti rain, banner slide-in, bounce-ins, parallax.
+- `highContrast` — toggles `body.hc`. DOM contrast bump is wired; **canvas outlines (platforms/hero/enemies/goal) under `hc` are still TODO at the render layer.**
+- `largeText` — toggles `body.lg-text`, ~15% font bump on HUD/banner/settings/cookie banner. Canvas text (timer pill etc.) is unaffected.
+- `screenShake` — gates a `Game.cameraShake()` that doesn't exist yet; the toggle persists for forward-compat.
+- `audioCues` — when true, damage/goal stingers route through a separate gain so they're audible even when master is muted.
+- `uiOpenSections` — which collapsibles in the settings panel are expanded; persisted so re-opening "a11y" survives reload.
+- `controlsBannerDismissed` — once the user `×`'s the in-game controls banner, it's suppressed forever (controls move to gear ▸ Controls).
 
 ## Testing notes
 

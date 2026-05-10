@@ -1484,12 +1484,25 @@ body.force-touch .controls-banner { display: none; }
   animation: bounceIn 700ms var(--ease-bouncy);
 }
 
+/* Tight icon + script-line group above the headline. Both deliberately
+   de-emphasized so the "Happy Mother's Day, …" headline is the dominant
+   typographic element on the card. */
+.win__intro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-2);
+}
+
 .win__greeting {
   font-family: var(--font-accent);
-  font-size: clamp(2rem, 6vw, 3.4rem);
-  color: var(--c-primary);
-  margin: 0 0 var(--s-2);
-  line-height: 1.05;
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  color: var(--c-text-muted);
+  margin: 0;
+  line-height: 1.15;
+  font-weight: 500;
+  text-align: left;
 }
 
 .win__name {
@@ -1498,28 +1511,15 @@ body.force-touch .controls-banner { display: none; }
   font-weight: 600;
 }
 
-.win__whisper {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-2);
-  justify-content: center;
-  margin: 0 0 var(--s-6);
-}
-.win__whisper-kid {
-  font-size: 1.4rem;
-  line-height: 1.35;
-  flex: 0 0 auto;
-}
 .win__msg {
   font-family: var(--font-accent);
-  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  font-size: clamp(1.25rem, 3.2vw, 1.65rem);
   color: var(--c-secondary-text);
-  margin: 0;
-  line-height: 1.45;
+  margin: 0 auto var(--s-6);
+  line-height: 1.4;
   font-weight: 500;
   font-style: italic;
-  max-width: 32ch;
-  text-align: left;
+  max-width: 28ch;
 }
 
 .win__hint {
@@ -1528,41 +1528,35 @@ body.force-touch .controls-banner { display: none; }
   margin: 0 0 var(--s-4);
 }
 
+/* Demoted from a pill to inline ancillary text — the personal message is the
+   emotional payload, the timer must not compete. */
 .win__time {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 8px;
-  background: var(--c-secondary-bg);
-  color: var(--c-secondary-text);
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 1rem;
-  margin: 0 0 var(--s-5);
-}
-
-.win__time-label {
+  display: block;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: var(--c-text-muted);
+  font-size: 0.9rem;
   font-weight: 500;
+  margin: 0 0 var(--s-4);
 }
 
 .win__time-value {
   font-weight: 700;
-  font-size: 1.4rem;
-  color: var(--c-primary);
+  color: var(--c-text);
   font-variant-numeric: tabular-nums;
 }
 
 .win__face {
-  /* Matches .char-card__face scale to avoid a tiny phone screen being eaten
-     by a 120px circle when the card already has 6 stacked elements below it. */
-  width: clamp(84px, 22vw, 120px);
-  height: clamp(84px, 22vw, 120px);
+  width: clamp(40px, 9vw, 56px);
+  height: clamp(40px, 9vw, 56px);
   border-radius: 50%;
-  margin: 0 auto var(--s-4);
   background: var(--c-secondary-bg);
   display: block;
   object-fit: cover;
-  border: 4px solid var(--c-card);
-  outline: 3px solid var(--c-primary);
+  border: 2px solid var(--c-card);
+  outline: 2px solid var(--c-primary);
+  flex: 0 0 auto;
 }
 
 .win__buttons {
@@ -1659,6 +1653,18 @@ body.force-touch .controls-banner { display: none; }
 }
 @media (max-width: 600px) {
   .source-link-line1 { font-size: 0.8rem; }
+}
+
+/* On the win screen the source link lives inside the card (sibling of the
+   buttons row), so override the viewport-pinned defaults to in-flow.
+   Title screen + other screens keep the fixed-bottom positioning. */
+.win__card .source-link {
+  position: static;
+  transform: none;
+  left: auto;
+  bottom: auto;
+  margin-top: var(--s-3);
+  display: inline-block;
 }
 
 /* ---------- Helpers ---------- */
