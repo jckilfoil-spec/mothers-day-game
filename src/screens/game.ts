@@ -10,6 +10,8 @@ import {
 import { getSelectedCharacter } from '../state.js';
 import { sfx, unlock } from '../audio/sounds.js';
 import { openSettings } from './settings.js';
+import { track, currentAttempt } from '../analytics.js';
+import { openControlsSheet } from './controlsSheet.js';
 
 /** Game screen — fullscreen canvas with HUD overlay. */
 export const gameScreen: Screen = (root, nav, route) => {
@@ -26,6 +28,10 @@ export const gameScreen: Screen = (root, nav, route) => {
   }
 
   unlock();
+  // Wall-clock anchor for level_failed / level_abandoned timing — the engine has
+  // its own per-level timer (in elapsedMs) but it doesn't start until first input,
+  // so for "abandoned at the menu before moving" we need our own anchor.
+  const startedAt = Date.now();
   const level =
     mapId === 'mountain' ? makeMountainLevel()
     : mapId === 'cave' ? makeCaveLevel()
@@ -81,6 +87,10 @@ export const gameScreen: Screen = (root, nav, route) => {
           nav({ name: 'editor', characterId: null });
         },
         onQuit: () => {
+          track('level_abandoned', {
+            level_id: mapId,
+            time_into_level_ms: Date.now() - startedAt,
+          });
           game.destroy();
           nav({ name: 'mapSelect' });
         },
@@ -99,13 +109,30 @@ export const gameScreen: Screen = (root, nav, route) => {
     title: 'Got it',
     'aria-label': 'Dismiss controls hint',
   }, ['×']);
+  // The `?` opens the deeper kbd matrix in a modal — keeps the always-on banner
+  // tight enough to fit on a 320px-wide phone alongside the explicit close.
+  const moreBtn = el('button', {
+    class: 'controls-banner__more',
+    'aria-label': 'More controls',
+    title: 'More controls',
+    onclick: () => {
+      sfx.click();
+      openControlsSheet();
+    },
+  }, ['?']);
   const banner = el('div', { class: 'controls-banner' }, [
     el('span', { class: 'controls-banner__row' }, [
-      el('kbd', {}, ['◀']), el('kbd', {}, ['▶']), ' move  ',
-      el('kbd', {}, ['Space']), ' or ', el('kbd', {}, ['↑']), ' jump (jump up through platforms)  ',
-      el('kbd', {}, ['↓']), ' drop through  ',
-      el('span', { class: 'muted' }, ['· click silly monsters to defeat them']),
+      el('span', { class: 'group' }, [
+        el('kbd', {}, ['◀']), el('kbd', {}, ['▶']), ' move',
+      ]),
+      el('span', { class: 'group' }, [
+        el('kbd', {}, ['Space']), ' jump',
+      ]),
+      el('span', { class: 'group' }, [
+        el('kbd', {}, ['↓']), ' drop',
+      ]),
     ]),
+    moreBtn,
     bannerCloseBtn,
   ]);
   bannerCloseBtn.addEventListener('click', () => {
@@ -138,11 +165,21 @@ export const gameScreen: Screen = (root, nav, route) => {
     },
     {
       onWin: (elapsedMs) => {
+        track('level_completed', {
+          level_id: mapId,
+          duration_ms: elapsedMs,
+          attempt_number: currentAttempt(mapId),
+        });
         nav({ name: 'win', map: mapId, elapsedMs });
       },
       onCharacterLost: () => {
         // Death-mode: lost all 3 lives. The character has already been deleted
         // from state by Game; just ferry the user back to the picker.
+        track('level_failed', {
+          level_id: mapId,
+          time_into_level_ms: Date.now() - startedAt,
+          failure_reason: 'lives_depleted',
+        });
         game.destroy();
         nav({ name: 'characters' });
       },

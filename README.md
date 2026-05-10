@@ -22,7 +22,7 @@ The game runs in any modern browser — no install, no account.
 
 Touch devices get on-screen controls instead of the keyboard.
 
-Faces and settings live in your browser's `localStorage` only — nothing leaves the device.
+Faces, names, and custom messages live in your browser's `localStorage` only — they never leave the device. Anonymous usage analytics (page views, button clicks, level progress, time on each screen, and session recordings with all text inputs masked) are collected via [PostHog](https://posthog.com) **only after you accept the cookie banner**. Decline and the game runs with zero tracking. See [`/privacy.html`](./public/privacy.html) for the full privacy note.
 
 ## Run it locally
 
@@ -80,7 +80,7 @@ docs/
 - **Procedural art, no image assets.** All scenes, characters, platforms, and enemies are drawn on the canvas with gradient/blur tricks for a watercolor feel. Lets you change the brand palette in `tokens.css` and have everything update.
 - **Procedural audio, no audio files.** All SFX are short oscillator routines via Web Audio API, ambient is two detuned sines with a slow LFO. Same reason: no asset pipeline, instantly remixable.
 - **`face-api.js` is intentionally _not_ included.** Auto face detection requires a 6MB+ model bundle that hurts first paint. The manual circle-drag crop is fast, kid-friendly, and works offline. (If someone wants to add it back, the integration point is `characterEditor.ts:handleFile`.)
-- **localStorage only.** No accounts, no backend, no analytics. The whole game is one static `dist/` folder — drop it on any static host.
+- **localStorage only for personal data.** No accounts, no backend. Photos and names you give characters live only in your browser. Anonymous usage analytics (page views, button clicks, level progress) are gated on a cookie-consent prompt — decline and zero PostHog network calls are made. The whole game is one static `dist/` folder — drop it on any static host.
 - **All design tokens in one CSS file.** Want a different palette? Edit `src/styles/tokens.css` — the canvas painters and CSS components both consume the same hex strings (CSS via `var(--c-…)`, canvas via the `C` table in `render.ts`).
 
 ### Tests

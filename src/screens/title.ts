@@ -2,6 +2,7 @@ import type { Screen } from '../router.js';
 import { el, mount } from '../util/dom.js';
 import { paintMountainScene } from '../game/render.js';
 import { sfx, unlock } from '../audio/sounds.js';
+import { track } from '../analytics.js';
 
 /**
  * Title screen — soft mountain sunrise behind a single huge "Start" CTA.
@@ -15,6 +16,7 @@ export const titleScreen: Screen = (root, nav) => {
     onclick: () => {
       unlock();
       sfx.click();
+      track('game_started', { from_screen: 'title' });
       nav({ name: 'characters' });
     },
   }, ['Start']);
@@ -24,6 +26,12 @@ export const titleScreen: Screen = (root, nav) => {
     el('h1', { class: 'title__main bounce-in' }, ['A Game for Mom']),
     el('p', { class: 'title__sub bounce-in' }, ["Press Start when you're ready."]),
     startBtn,
+    el('a', {
+      class: 'title__source',
+      href: 'https://github.com/jckilfoil-spec/mothers-day-game',
+      target: '_blank',
+      rel: 'noopener',
+    }, ['✨ open source — fork on github']),
   ]);
 
   const wrap = el('div', { class: 'title' }, [bg, content]);

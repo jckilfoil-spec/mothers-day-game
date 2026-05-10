@@ -317,6 +317,29 @@ body.gameplay-active .feedback-btn { display: none; }
   max-width: 36ch;
 }
 
+/* Open-source link below the Start button. Subtle so it reads as credentials,
+   not a CTA that competes with Start. */
+.title__source {
+  margin-top: var(--s-2);
+  color: var(--c-secondary-text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  opacity: 0.75;
+  transition: opacity 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) and (pointer: fine) {
+  .title__source:hover {
+    opacity: 1;
+  }
+}
+.title__source:focus-visible {
+  outline: 3px solid var(--c-primary);
+  outline-offset: 4px;
+  opacity: 1;
+}
+
 @keyframes bounceIn {
   0% { transform: scale(0.6); opacity: 0; }
   60% { transform: scale(1.1); opacity: 1; }
@@ -941,6 +964,86 @@ body.gameplay-active .feedback-btn { display: none; }
   cursor: pointer;
 }
 
+/* ---------- mapSelect chip layout ----------
+   Wrapper that lets the character name ellipsize while keeping the Change
+   action always visible. The inner .hero-chip carries .character-chip pill
+   styling above, so this is layout-only. */
+.mapselect-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mapselect-meta .hero-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mapselect-meta .hero-chip .face { flex: 0 0 auto; }
+.mapselect-meta .hero-chip .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.mapselect-meta .change-link {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--c-primary);
+  text-decoration: underline;
+  padding: 0;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ---------- Controls help sheet ----------
+   Modal opened from the banner's `?` button. Reuses .modal-backdrop and
+   mirrors the .settings-panel pattern so the visual language stays consistent. */
+.controls-sheet {
+  background: var(--c-card);
+  border-radius: var(--r-xl);
+  padding: var(--s-5) var(--s-5) var(--s-4);
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: bounceIn 320ms var(--ease-bouncy);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.controls-sheet h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.controls-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-3) var(--s-4);
+  margin: 0;
+  align-items: center;
+}
+.controls-grid dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.controls-grid dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--c-text);
+}
+.controls-sheet .btn {
+  align-self: stretch;
+  height: 52px;
+  font-size: 1rem;
+  margin-top: var(--s-2);
+}
+
 /* ---------- Game canvas ---------- */
 .game-stage {
   position: fixed;
@@ -1057,42 +1160,48 @@ body.gameplay-active .feedback-btn { display: none; }
 
 .controls-banner {
   position: fixed;
-  bottom: max(32px, calc(env(safe-area-inset-bottom) + 16px));
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
+  left: 12px;
+  right: 12px;
+  /* anchor both — no translateX trick, content centers via max-content + auto margins */
+  margin: 0 auto;
+  max-width: max-content;
   background: rgba(255, 254, 248, 0.94);
   backdrop-filter: blur(6px);
-  padding: 12px 14px 12px 22px;
+  padding: 8px 8px 8px 16px;
   border-radius: 999px;
-  font-weight: 500;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
-  z-index: 60;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 12px;
-  max-width: calc(100vw - 32px);
+  gap: 10px;
+  font-size: 0.9rem;
+  z-index: 60;
   transition: opacity 250ms ease, transform 250ms ease;
 }
 
 .controls-banner.is-fading {
   opacity: 0;
-  transform: translateX(-50%) translateY(8px);
+  transform: translateY(8px);
 }
 
 .controls-banner__row {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
-  font-size: 0.95rem;
-  color: var(--c-text);
+  align-items: center;
+  gap: 4px 12px;
+  /* Lets the row shrink before the X gets squeezed off-screen at 320px. */
+  min-width: 0;
 }
 
-.controls-banner__row .muted {
+.controls-banner__row .group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   white-space: nowrap;
 }
 
-.controls-banner kbd {
+.controls-banner kbd,
+.controls-grid kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1110,31 +1219,29 @@ body.gameplay-active .feedback-btn { display: none; }
   line-height: 1;
 }
 
+.controls-banner__more,
 .controls-banner__close {
-  width: 32px;
-  height: 32px;
+  /* THE killer rule — these never collapse, so the row shrinks instead of the
+     X getting pushed off-screen on 320px-wide devices. */
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: none;
   background: rgba(42, 31, 26, 0.08);
   color: var(--c-text);
-  font-size: 1.2rem;
+  font-family: var(--font-display);
   font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 0.95rem;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: background 120ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 120ms ease;
 }
 
-.controls-banner__close:hover {
-  background: var(--c-danger);
-  color: white;
-}
-
-.controls-banner__close:active {
-  transform: scale(0.92);
-}
+.controls-banner__close:hover { background: var(--c-danger); color: #fff; }
+.controls-banner__more:hover  { background: var(--c-secondary-bg); }
 
 .touch-controls {
   position: fixed;
@@ -1156,6 +1263,10 @@ body.gameplay-active .feedback-btn { display: none; }
     display: none;
   }
 }
+/* mobile-audit.html iframes can't fire @media (pointer: coarse), so a `?touch=1`
+   query param toggles `body.force-touch` to mirror the same display rules. */
+body.force-touch .touch-controls { display: flex; }
+body.force-touch .controls-banner { display: none; }
 
 .touch-cluster {
   display: flex;
@@ -1343,6 +1454,48 @@ body.gameplay-active .feedback-btn { display: none; }
   outline-offset: 3px;
 }
 
+/* Open-source / fork-it nudge below the gameplay-loop buttons. Two-line layout:
+   the human pitch on top, the bare URL underneath so it reads as a real GitHub
+   link (not just a button label). */
+.win__source {
+  display: block;
+  margin-top: var(--s-5);
+  color: var(--c-secondary-text);
+  text-decoration: none;
+  text-align: center;
+  opacity: 0.85;
+  transition: opacity 120ms ease, color 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.win__source-line1 {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.win__source-url {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+@media (hover: hover) and (pointer: fine) {
+  .win__source:hover {
+    opacity: 1;
+    color: var(--c-primary);
+  }
+  .win__source:hover .win__source-url {
+    color: var(--c-primary);
+  }
+}
+.win__source:focus-visible {
+  outline: 3px solid var(--c-primary);
+  outline-offset: 3px;
+  opacity: 1;
+  border-radius: var(--r-sm);
+}
+
 /* ---------- Helpers ---------- */
 .visually-hidden {
   position: absolute;
@@ -1357,3 +1510,58 @@ body.gameplay-active .feedback-btn { display: none; }
 
 .text-center { text-align: center; }
 .muted { color: var(--c-text-muted); }
+
+/* ---------- Cookie consent banner ----------
+   Shown only on first load (or until decision is made). Decision persists in
+   localStorage.cookie_consent. Hidden during gameplay AND on the final win
+   screen so the celebration moment isn't disturbed. The actual binding +
+   PostHog gating happens in the inline <script> in index.html. */
+.cookie-consent {
+  position: fixed;
+  left: var(--s-4);
+  right: var(--s-4);
+  bottom: max(var(--s-4), env(safe-area-inset-bottom));
+  z-index: 10000;
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--c-card);
+  color: var(--c-text);
+  border-radius: var(--r-lg);
+  padding: 14px 18px;
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 6px 24px rgba(42, 31, 26, 0.18);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex-wrap: wrap;
+}
+.cookie-consent__text { margin: 0; flex: 1 1 280px; color: var(--c-text); }
+.cookie-consent__text a { color: var(--c-primary); }
+.cookie-consent__actions { display: flex; gap: var(--s-2); }
+.cookie-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 36px;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+.cookie-btn--primary { background: var(--c-text); color: #fff; }
+.cookie-btn--ghost { background: transparent; color: var(--c-text-muted); }
+@media (hover: hover) and (pointer: fine) {
+  .cookie-btn:hover { opacity: 0.85; }
+}
+.cookie-btn:focus-visible {
+  outline: 3px solid var(--c-primary);
+  outline-offset: 2px;
+}
+body.gameplay-active .cookie-consent,
+body.final-screen .cookie-consent { display: none; }

@@ -17,6 +17,11 @@
     }
     header { max-width: 1200px; margin: 0 auto 12px; }
     h1 { font-size: 18px; margin: 0 0 6px; font-weight: 600; }
+    h2 {
+      font-size: 14px; margin: 24px auto 12px; max-width: 1200px;
+      font-weight: 600; opacity: 0.85;
+    }
+    h2 .hint { opacity: 0.55; font-weight: 400; }
     p { font-size: 13px; opacity: 0.75; margin: 0 0 12px; max-width: 720px; line-height: 1.5; }
     .toolbar {
       display: flex; gap: 8px; flex-wrap: wrap;
@@ -75,7 +80,13 @@
       <button id="goto-mapselect">Go to: mapSelect (needs a hero first)</button>
     </div>
   </header>
+
+  <h2>Default UI <span class="hint">— pointer detected by browser</span></h2>
   <div class="row" id="row"></div>
+
+  <h2>Touch UI <span class="hint">— ?touch=1 forces the D-pad layout (the @media (pointer: coarse) query doesn't fire inside iframes)</span></h2>
+  <div class="row" id="row-touch"></div>
+
   <script>
     const sizes = [
       { w: 320, h: 568, label: 'iPhone SE 1' },
@@ -84,33 +95,44 @@
       { w: 390, h: 844, label: 'iPhone 13/14' },
       { w: 414, h: 896, label: 'iPhone XR/11' },
     ];
-    const row = document.getElementById('row');
     const frames = [];
-    for (const s of sizes) {
-      const wrap = document.createElement('div');
-      wrap.className = 'frame';
-      const label = document.createElement('div');
-      label.className = 'frame__label';
-      label.innerHTML = `${s.label} <span class="px">${s.w}×${s.h}</span>`;
-      const iframe = document.createElement('iframe');
-      iframe.src = './';
-      iframe.width = String(s.w);
-      iframe.height = String(s.h);
-      // Prevent iOS auto-zoom on focus inside iframes
-      iframe.setAttribute('scrolling', 'auto');
-      wrap.appendChild(label);
-      wrap.appendChild(iframe);
-      row.appendChild(wrap);
-      frames.push(iframe);
+
+    function buildRow(targetEl, srcQuery, labelSuffix) {
+      for (const s of sizes) {
+        const wrap = document.createElement('div');
+        wrap.className = 'frame';
+        const label = document.createElement('div');
+        label.className = 'frame__label';
+        label.innerHTML = `${s.label}${labelSuffix} <span class="px">${s.w}×${s.h}</span>`;
+        const iframe = document.createElement('iframe');
+        iframe.src = './' + srcQuery;
+        // Remember the base query so reload-all + go-to buttons preserve ?touch=1
+        // for touch-row frames after navigation.
+        iframe.dataset.baseQuery = srcQuery;
+        iframe.width = String(s.w);
+        iframe.height = String(s.h);
+        // Prevent iOS auto-zoom on focus inside iframes
+        iframe.setAttribute('scrolling', 'auto');
+        wrap.appendChild(label);
+        wrap.appendChild(iframe);
+        targetEl.appendChild(wrap);
+        frames.push(iframe);
+      }
     }
+
+    buildRow(document.getElementById('row'), '', '');
+    buildRow(document.getElementById('row-touch'), '?touch=1', ' · Touch UI');
+
+    function srcFor(f) { return './' + (f.dataset.baseQuery || ''); }
+
     document.getElementById('reload-all').addEventListener('click', () => {
-      for (const f of frames) f.src = './';
+      for (const f of frames) f.src = srcFor(f);
     });
     document.getElementById('goto-characters').addEventListener('click', () => {
       // The router is in-memory only — easiest "deep link" is a fresh load that
       // immediately clicks Start. Reload first, then click after onload.
       for (const f of frames) {
-        f.src = './';
+        f.src = srcFor(f);
         f.addEventListener('load', () => {
           try {
             const doc = f.contentDocument;
@@ -123,7 +145,7 @@
     document.getElementById('goto-mapselect').addEventListener('click', () => {
       // No deep-link API yet — mash the buttons after load.
       for (const f of frames) {
-        f.src = './';
+        f.src = srcFor(f);
         let step = 0;
         const advance = () => {
           try {
