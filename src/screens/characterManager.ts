@@ -37,7 +37,7 @@ export const characterManagerScreen: Screen = (root, nav) => {
     ]),
     grid,
     el('p', { class: 'muted text-center', style: 'margin-top:var(--s-6)' }, [
-      'Who are you? ...',
+      'Who are you?',
     ]),
   ]);
 

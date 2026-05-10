@@ -77,28 +77,36 @@ export const winScreen: Screen = (root, nav, route) => {
       : null,
   ]);
 
+  const sourceLink = el('a', {
+    class: 'source-link',
+    href: 'https://github.com/jckilfoil-spec/mothers-day-game',
+    target: '_blank',
+    rel: 'noopener',
+  }, [
+    el('span', { class: 'source-link-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
+  ]);
+
   const card = el('div', { class: 'win__card' }, [
-    character.faceImage
-      ? el('img', {
-          class: 'win__face',
-          src: character.faceImage,
-          alt: character.name,
-        })
-      : el('div', {
-          class: 'win__face char-card__face--placeholder',
-        }, ['🙂']),
-    el('p', { class: 'win__greeting' }, ['We made it. I had to tell you —']),
+    el('div', { class: 'win__intro' }, [
+      character.faceImage
+        ? el('img', {
+            class: 'win__face',
+            src: character.faceImage,
+            alt: character.name,
+          })
+        : el('div', {
+            class: 'win__face char-card__face--placeholder',
+          }, ['🙂']),
+      el('p', { class: 'win__greeting' }, ['We made it. I had to tell you —']),
+    ]),
     el('h1', { class: 'win__name' }, [`Happy Mother's Day, ${character.name}!`]),
     elapsedMs && elapsedMs > 0
       ? el('p', { class: 'win__time' }, [
-          el('span', { class: 'win__time-label' }, ['Finished in']),
+          'Finished in ',
           el('span', { class: 'win__time-value' }, [formatTime(elapsedMs)]),
         ])
       : null,
-    el('div', { class: 'win__whisper' }, [
-      el('span', { class: 'win__whisper-kid', 'aria-hidden': 'true' }, ['🧒']),
-      el('p', { class: 'win__msg' }, [character.customMessage]),
-    ]),
+    el('p', { class: 'win__msg' }, [character.customMessage]),
     shareRow,
     el('p', { class: 'win__hint' }, ['Take a beat. Then —']),
     el('div', { class: 'win__buttons' }, [
@@ -116,29 +124,11 @@ export const winScreen: Screen = (root, nav, route) => {
           nav({ name: 'mapSelect' });
         },
       }, ['Other adventure']),
-      el('button', {
-        class: 'btn btn--secondary',
-        onclick: () => {
-          sfx.click();
-          nav({ name: 'characters' });
-        },
-      }, ['Pick someone else']),
     ]),
+    sourceLink,
   ]);
 
-  // "Fork it" CTA — pinned to the viewport bottom (sibling of the card, not
-  // inside it). Position: fixed in CSS so it stays at the bottom of the screen
-  // on any viewport: visible on small phones, out of the way on tall desktops.
-  const sourceLink = el('a', {
-    class: 'source-link',
-    href: 'https://github.com/jckilfoil-spec/mothers-day-game',
-    target: '_blank',
-    rel: 'noopener',
-  }, [
-    el('span', { class: 'source-link-line1' }, ['✨ made with ❤ — fork it for YOUR mom']),
-  ]);
-
-  const wrap = el('div', { class: 'win' }, [confettiWrap, card, sourceLink]);
+  const wrap = el('div', { class: 'win' }, [confettiWrap, card]);
   mount(root, wrap);
 
   // Resize the confetti canvas to fit
