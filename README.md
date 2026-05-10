@@ -8,7 +8,7 @@ A warm, painted-style platformer where you upload a photo of mom (or anyone you 
 
 ## Play
 
-The game runs in any modern browser — no install, no account, no tracking.
+The game runs in any modern browser — no install, no account.
 
 1. Click **Start**.
 2. Tap **Add character** and pick a photo. Drag the circle to frame the face, slide to resize, hit **Looks good →**.
@@ -112,4 +112,4 @@ MIT — see [LICENSE](./LICENSE). Make it yours, fork it, gift it, send it to yo
 
 ## Made by
 
-[John Kilfoil](https://github.com/jckilfoil-spec) for Katie, with help from Quinn (4 yrs, lead playtester) and Claude Opus.
+[John Kilfoil](https://github.com/jckilfoil-spec) for Katie, with help from Quinn (~4 yrs, lead playtester) and Claude Opus.
