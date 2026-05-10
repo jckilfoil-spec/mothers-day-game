@@ -11,6 +11,10 @@ import { getSettings } from '../state.js';
 
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
+/** Separate gain for accessibility "audio cues" (damage/goal stingers). Routed
+ *  to ctx.destination directly so it bypasses master mute — keeps important
+ *  feedback audible for users who want only the essential audio. */
+let cueGain: GainNode | null = null;
 let ambientNodes: { osc: OscillatorNode; gain: GainNode }[] = [];
 
 function ensureCtx(): AudioContext | null {
@@ -20,9 +24,13 @@ function ensureCtx(): AudioContext | null {
   if (!Ctor) return null;
   try {
     ctx = new Ctor();
+    const settings = getSettings();
     masterGain = ctx.createGain();
-    masterGain.gain.value = getSettings().muted ? 0 : 0.55;
+    masterGain.gain.value = settings.muted ? 0 : 0.55;
     masterGain.connect(ctx.destination);
+    cueGain = ctx.createGain();
+    cueGain.gain.value = settings.audioCues ? 0.55 : 0;
+    cueGain.connect(ctx.destination);
     return ctx;
   } catch {
     return null;
@@ -40,6 +48,12 @@ export function setMuted(muted: boolean): void {
   masterGain.gain.value = muted ? 0 : 0.55;
 }
 
+/** Toggle the a11y audio-cue path independently of master mute. */
+export function setAudioCues(enabled: boolean): void {
+  if (!cueGain) return;
+  cueGain.gain.value = enabled ? 0.55 : 0;
+}
+
 interface ToneOpts {
   freq: number;
   type?: OscillatorType;
@@ -48,11 +62,15 @@ interface ToneOpts {
   duration?: number;
   gain?: number;
   freqEnd?: number;
+  /** Route through `cueGain` (master-mute-bypass) — used for damage/goal stingers
+   *  so they remain audible for users with `audioCues: true` and master muted. */
+  cue?: boolean;
 }
 
 function tone(opts: ToneOpts): void {
   const c = ensureCtx();
-  if (!c || !masterGain) return;
+  const target = opts.cue ? cueGain : masterGain;
+  if (!c || !target) return;
   const now = c.currentTime;
   const dur = opts.duration ?? 0.18;
   const attack = opts.attack ?? 0.01;
@@ -68,7 +86,7 @@ function tone(opts: ToneOpts): void {
   g.gain.setValueAtTime(0, now);
   g.gain.linearRampToValueAtTime(peak, now + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, now + attack + decay);
-  osc.connect(g).connect(masterGain);
+  osc.connect(g).connect(target);
   osc.start(now);
   osc.stop(now + dur + 0.05);
 }
@@ -81,20 +99,21 @@ export const sfx = {
     tone({ freq: 220, freqEnd: 90, type: 'square', duration: 0.12, attack: 0.001, decay: 0.1, gain: 0.18 });
   },
   defeat(): void {
-    tone({ freq: 540, freqEnd: 180, type: 'triangle', duration: 0.32, attack: 0.005, decay: 0.3, gain: 0.32 });
-    setTimeout(() => tone({ freq: 220, freqEnd: 110, type: 'sine', duration: 0.2, gain: 0.2 }), 60);
+    tone({ freq: 540, freqEnd: 180, type: 'triangle', duration: 0.32, attack: 0.005, decay: 0.3, gain: 0.32, cue: true });
+    setTimeout(() => tone({ freq: 220, freqEnd: 110, type: 'sine', duration: 0.2, gain: 0.2, cue: true }), 60);
   },
   click(): void {
     tone({ freq: 880, freqEnd: 990, type: 'sine', duration: 0.06, attack: 0.001, decay: 0.05, gain: 0.12 });
   },
   win(): void {
-    // Three rising chord notes
+    // Three rising chord notes — routed through cueGain so a low-vision player
+    // muting the master still hears their victory.
     const c = ensureCtx();
     if (!c) return;
     const notes = [392, 494, 587, 784]; // G4, B4, D5, G5
     notes.forEach((f, i) => {
       setTimeout(
-        () => tone({ freq: f, type: 'triangle', duration: 0.6, attack: 0.02, decay: 0.55, gain: 0.22 }),
+        () => tone({ freq: f, type: 'triangle', duration: 0.6, attack: 0.02, decay: 0.55, gain: 0.22, cue: true }),
         i * 110,
       );
     });
@@ -103,10 +122,10 @@ export const sfx = {
     tone({ freq: 180, type: 'sine', duration: 0.05, attack: 0.001, decay: 0.04, gain: 0.05 });
   },
   ouch(): void {
-    tone({ freq: 700, freqEnd: 220, type: 'square', duration: 0.18, attack: 0.005, decay: 0.16, gain: 0.18 });
+    tone({ freq: 700, freqEnd: 220, type: 'square', duration: 0.18, attack: 0.005, decay: 0.16, gain: 0.18, cue: true });
   },
   honk(): void {
-    tone({ freq: 240, freqEnd: 200, type: 'sawtooth', duration: 0.16, attack: 0.005, decay: 0.14, gain: 0.16 });
+    tone({ freq: 240, freqEnd: 200, type: 'sawtooth', duration: 0.16, attack: 0.005, decay: 0.14, gain: 0.16, cue: true });
   },
 };
 

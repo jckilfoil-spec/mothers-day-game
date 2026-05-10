@@ -11,12 +11,18 @@ import {
   setMuted,
   setZoom,
   setDeathMode,
+  setReduceMotion,
+  setHighContrast,
+  setLargeText,
+  setScreenShake,
+  setAudioCues,
+  toggleUiSection,
   getSelectedCharacter,
   resetLives,
   getCharacters,
   selectCharacter,
 } from '../state.js';
-import { sfx, setMuted as audioSetMuted } from '../audio/sounds.js';
+import { sfx, setMuted as audioSetMuted, setAudioCues as audioSetAudioCues } from '../audio/sounds.js';
 
 export interface SettingsOpts {
   /** Called whenever the user changes a setting that the running game cares about
@@ -193,6 +199,35 @@ export function openSettings(opts: SettingsOpts): void {
     }
     panel.appendChild(deathRow);
 
+    // ---- Collapsible: Controls ----
+    panel.appendChild(makeCollapsibleSection({
+      id: 'controls',
+      title: 'Controls',
+      open: s.uiOpenSections.includes('controls'),
+      body: makeControlsBody(),
+      onToggle: () => {
+        sfx.click();
+        toggleUiSection('controls');
+        render();
+      },
+    }));
+
+    // ---- Collapsible: Accessibility ----
+    panel.appendChild(makeCollapsibleSection({
+      id: 'a11y',
+      title: 'Accessibility',
+      open: s.uiOpenSections.includes('a11y'),
+      body: makeA11yBody(s, () => {
+        opts.onSettingsChange?.();
+        render();
+      }),
+      onToggle: () => {
+        sfx.click();
+        toggleUiSection('a11y');
+        render();
+      },
+    }));
+
     // ---- Footer actions ----
     panel.appendChild(
       el('div', { class: 'settings-panel__footer' }, [
@@ -219,4 +254,126 @@ export function openSettings(opts: SettingsOpts): void {
   document.body.appendChild(backdrop);
   // Focus first interactive control for keyboard users.
   (panel.querySelector('input,button') as HTMLElement | null)?.focus();
+}
+
+/** Generic collapsible section, used by Controls + Accessibility. The body is
+ *  re-mounted on every render() so toggle handlers can update local state and
+ *  trigger a re-render naturally. */
+function makeCollapsibleSection(opts: {
+  id: string;
+  title: string;
+  open: boolean;
+  body: HTMLElement;
+  onToggle: () => void;
+}): HTMLElement {
+  const wrap = el('div', { class: 'settings-section' + (opts.open ? ' is-open' : '') });
+  const header = el('button', {
+    class: 'settings-section-header',
+    type: 'button',
+    'aria-expanded': opts.open ? 'true' : 'false',
+    'aria-controls': `settings-section-${opts.id}`,
+    onclick: opts.onToggle,
+  }, [
+    el('span', { class: 'settings-section-arrow' }, [opts.open ? '▾' : '▸']),
+    el('span', { class: 'settings-section-title' }, [opts.title]),
+  ]);
+  wrap.appendChild(header);
+  if (opts.open) {
+    const body = el('div', {
+      class: 'settings-section-body',
+      id: `settings-section-${opts.id}`,
+    }, [opts.body]);
+    wrap.appendChild(body);
+  }
+  return wrap;
+}
+
+function makeControlsBody(): HTMLElement {
+  return el('dl', { class: 'settings-controls' }, [
+    el('dt', {}, [
+      el('kbd', {}, ['◀']), el('kbd', {}, ['▶']),
+      ' / ',
+      el('kbd', {}, ['A']), el('kbd', {}, ['D']),
+    ]),
+    el('dd', {}, ['Move left / right']),
+    el('dt', {}, [el('kbd', {}, ['Space']), ' / ', el('kbd', {}, ['↑'])]),
+    el('dd', {}, ['Jump — you can jump up through platforms from below']),
+    el('dt', {}, [el('kbd', {}, ['↓'])]),
+    el('dd', {}, ['Drop down through a platform']),
+    el('dt', {}, ['Click / tap']),
+    el('dd', {}, ['Defeat silly monsters & knock phones off the road']),
+  ]);
+}
+
+function makeA11yBody(
+  s: ReturnType<typeof getSettings>,
+  onChange: () => void,
+): HTMLElement {
+  // Each toggle: persists, applies live (body class or audio gain), then re-renders
+  // so the on/off label updates.
+  function row(label: string, hint: string, current: boolean, apply: (next: boolean) => void): HTMLElement {
+    return el('div', { class: 'settings-row settings-row--stacked' }, [
+      el('div', { class: 'settings-row__line' }, [
+        el('label', {}, [label]),
+        el('button', {
+          type: 'button',
+          class: 'toggle' + (current ? ' is-on' : ''),
+          onclick: () => {
+            const next = !current;
+            apply(next);
+            sfx.click();
+            onChange();
+          },
+        }, [current ? 'On' : 'Off']),
+      ]),
+      el('p', { class: 'settings-row__hint' }, [hint]),
+    ]);
+  }
+
+  return el('div', { class: 'settings-a11y' }, [
+    row(
+      'Reduce motion',
+      'Disables confetti, bounce-in, and parallax. Defaults to your OS prefers-reduced-motion setting.',
+      s.reduceMotion,
+      (next) => {
+        setReduceMotion(next);
+        document.body.classList.toggle('reduce-motion', next);
+      },
+    ),
+    row(
+      'High contrast',
+      'Bumps the contrast on HUD text + panel borders.',
+      s.highContrast,
+      (next) => {
+        setHighContrast(next);
+        document.body.classList.toggle('hc', next);
+      },
+    ),
+    row(
+      'Larger text',
+      'Bumps HUD, banner, and settings text by ~15%.',
+      s.largeText,
+      (next) => {
+        setLargeText(next);
+        document.body.classList.toggle('lg-text', next);
+      },
+    ),
+    row(
+      'Screen shake',
+      'Future hazards may shake the camera; turn off to disable.',
+      s.screenShake,
+      (next) => {
+        setScreenShake(next);
+      },
+    ),
+    row(
+      'Audio cues',
+      'Damage and victory stingers play even with sound muted, for low-vision players.',
+      s.audioCues,
+      (next) => {
+        setAudioCues(next);
+        audioSetAudioCues(next);
+      },
+    ),
+  ]);
 }

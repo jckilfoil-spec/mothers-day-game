@@ -665,11 +665,34 @@ body.gameplay-active .feedback-btn { display: none; }
   padding: var(--s-5) var(--s-5) var(--s-4);
   max-width: 460px;
   width: 100%;
+  /* Cap to viewport so the panel scrolls internally when many collapsibles are
+     expanded (controls, a11y, etc.) — backdrop padding is var(--s-4) per side. */
+  max-height: calc(100vh - var(--s-4) * 2);
+  max-height: calc(100dvh - var(--s-4) * 2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Thin rounded scrollbar so it visually fits the panel's --r-xl corners. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 112, 104, 0.4) transparent;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: bounceIn 320ms var(--ease-bouncy);
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+}
+.settings-panel::-webkit-scrollbar {
+  width: 8px;
+}
+.settings-panel::-webkit-scrollbar-track {
+  background: transparent;
+  margin: var(--s-3) 0;
+}
+.settings-panel::-webkit-scrollbar-thumb {
+  background: rgba(125, 112, 104, 0.4);
+  border-radius: 999px;
+}
+.settings-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(125, 112, 104, 0.6);
 }
 
 .settings-panel__header {
@@ -861,6 +884,44 @@ body.gameplay-active .feedback-btn { display: none; }
   background: var(--c-danger);
 }
 
+/* ---------- Collapsible sections inside settings panel ---------- */
+.settings-section {
+  border-top: 1px solid rgba(125, 112, 104, 0.15);
+  padding: var(--s-2) 0;
+}
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: var(--s-2) 0;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--c-text);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.settings-section-arrow {
+  display: inline-block;
+  width: 1em;
+  color: var(--c-secondary-text);
+}
+.settings-section-body {
+  padding: var(--s-2) 0 var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.settings-a11y {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
 .settings-panel__footer {
   display: flex;
   justify-content: space-between;
@@ -926,6 +987,140 @@ body.gameplay-active .feedback-btn { display: none; }
 
 .map-tile__sub {
   margin: 0;
+  color: var(--c-text-muted);
+}
+
+/* Pulled-up subtext under the map-select header. Used to live below the tiles. */
+.mapselect-sub {
+  margin: 0 0 var(--s-5);
+}
+
+/* Open-world section divider — sits between the 4 solid maps and the prototype tile. */
+.mapselect-section {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin: var(--s-7) 0 var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px dashed rgba(125, 112, 104, 0.35);
+}
+.mapselect-section__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.mapselect-section__sub {
+  color: var(--c-text-muted);
+  font-size: 0.9rem;
+}
+
+/* Prototype tile — small "Beta" badge in top-right of the art block. */
+.map-tile--badged .map-tile__art {
+  position: relative;
+}
+.map-tile__badge {
+  position: absolute;
+  top: var(--s-3);
+  right: var(--s-3);
+  background: var(--c-primary);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+}
+
+/* ---------- Difficulty modal (open-world prototype) ---------- */
+.difficulty-modal {
+  background: var(--c-card);
+  border-radius: var(--r-xl);
+  padding: var(--s-5) var(--s-5) var(--s-4);
+  max-width: 520px;
+  width: 100%;
+  max-height: calc(100dvh - var(--s-4) * 2);
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: bounceIn 320ms var(--ease-bouncy);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.difficulty-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.difficulty-modal__head h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.difficulty-modal__sub {
+  margin: 0;
+  color: var(--c-text-muted);
+  font-size: 0.95rem;
+}
+.difficulty-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+}
+.difficulty-card {
+  background: var(--c-secondary-bg);
+  border: 2px solid transparent;
+  border-radius: var(--r-lg);
+  padding: var(--s-3) var(--s-4);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  transition: transform 120ms var(--ease-bouncy), border-color 120ms ease, background 120ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.difficulty-card:hover,
+.difficulty-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--c-primary);
+  outline: none;
+}
+.difficulty-card.is-last-pick {
+  border-color: var(--c-primary);
+  background: var(--c-card);
+}
+.difficulty-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.difficulty-card__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.difficulty-card__hp {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--c-primary);
+  font-size: 0.95rem;
+}
+.difficulty-card__flavor {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--c-text);
+}
+.difficulty-card__hint {
+  margin: 0;
+  font-size: 0.85rem;
   color: var(--c-text-muted);
 }
 
@@ -1000,48 +1195,24 @@ body.gameplay-active .feedback-btn { display: none; }
   cursor: pointer;
 }
 
-/* ---------- Controls help sheet ----------
-   Modal opened from the banner's `?` button. Reuses .modal-backdrop and
-   mirrors the .settings-panel pattern so the visual language stays consistent. */
-.controls-sheet {
-  background: var(--c-card);
-  border-radius: var(--r-xl);
-  padding: var(--s-5) var(--s-5) var(--s-4);
-  max-width: 460px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: bounceIn 320ms var(--ease-bouncy);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-}
-.controls-sheet h2 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-.controls-grid {
+/* ---------- Controls reference (inside settings ▸ Controls collapsible) ---------- */
+.settings-controls {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: var(--s-3) var(--s-4);
   margin: 0;
   align-items: center;
 }
-.controls-grid dt {
+.settings-controls dt {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
 }
-.controls-grid dd {
+.settings-controls dd {
   margin: 0;
   font-size: 0.95rem;
   color: var(--c-text);
-}
-.controls-sheet .btn {
-  align-self: stretch;
-  height: 52px;
-  font-size: 1rem;
-  margin-top: var(--s-2);
 }
 
 /* ---------- Game canvas ---------- */
@@ -1201,7 +1372,7 @@ body.gameplay-active .feedback-btn { display: none; }
 }
 
 .controls-banner kbd,
-.controls-grid kbd {
+.settings-controls kbd {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1219,9 +1390,8 @@ body.gameplay-active .feedback-btn { display: none; }
   line-height: 1;
 }
 
-.controls-banner__more,
 .controls-banner__close {
-  /* THE killer rule — these never collapse, so the row shrinks instead of the
+  /* THE killer rule — never collapses, so the row shrinks instead of the
      X getting pushed off-screen on 320px-wide devices. */
   flex: 0 0 auto;
   width: 28px;
@@ -1241,7 +1411,6 @@ body.gameplay-active .feedback-btn { display: none; }
 }
 
 .controls-banner__close:hover { background: var(--c-danger); color: #fff; }
-.controls-banner__more:hover  { background: var(--c-secondary-bg); }
 
 .touch-controls {
   position: fixed;
@@ -1347,13 +1516,28 @@ body.force-touch .controls-banner { display: none; }
   font-weight: 600;
 }
 
+.win__whisper {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  justify-content: center;
+  margin: 0 0 var(--s-6);
+}
+.win__whisper-kid {
+  font-size: 1.4rem;
+  line-height: 1.35;
+  flex: 0 0 auto;
+}
 .win__msg {
   font-family: var(--font-accent);
-  font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
   color: var(--c-secondary-text);
-  margin: 0 0 var(--s-6);
-  line-height: 1.35;
-  font-weight: 600;
+  margin: 0;
+  line-height: 1.45;
+  font-weight: 500;
+  font-style: italic;
+  max-width: 32ch;
+  text-align: left;
 }
 
 .win__hint {
@@ -1565,3 +1749,53 @@ body.force-touch .controls-banner { display: none; }
 }
 body.gameplay-active .cookie-consent,
 body.final-screen .cookie-consent { display: none; }
+
+/* ---------- Accessibility body classes ----------
+   Toggled from settings ▸ Accessibility (state.ts holds the flags).
+   `reduce-motion` honors prefers-reduced-motion as default; explicit toggle wins. */
+
+/* Reduce motion: kill non-essential animations & transitions DOM-wide.
+   Confetti is gated separately in win.ts (instantiation skipped). */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High contrast: bumps DOM-side contrast on chrome that overlays gameplay.
+   Canvas-side outlines (platforms, hero, enemies) are a separate render pass. */
+body.hc .game-hud__char,
+body.hc .controls-banner,
+body.hc .settings-panel,
+body.hc .cookie-consent {
+  border: 2px solid var(--c-text);
+}
+body.hc .game-hud__char,
+body.hc .icon-pill {
+  background: #fff;
+  color: #000;
+}
+body.hc .toggle {
+  border-color: var(--c-text);
+}
+body.hc .settings-row__hint,
+body.hc .settings-section-arrow {
+  color: var(--c-text);
+}
+
+/* Larger text: ~15% bump on the in-game/HUD/settings/cookie chrome.
+   Avoids changing canvas text (timer pill, score) since canvas is fixed-pixel. */
+body.lg-text .game-hud__char,
+body.lg-text .controls-banner,
+body.lg-text .settings-panel,
+body.lg-text .settings-row label,
+body.lg-text .settings-row__hint,
+body.lg-text .settings-section-header,
+body.lg-text .cookie-consent,
+body.lg-text .toggle,
+body.lg-text .feedback-btn {
+  font-size: 1.15em;
+}

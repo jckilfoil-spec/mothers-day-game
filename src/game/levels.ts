@@ -6,6 +6,7 @@
  *  comfortably within the ~263px jump height (PHYSICS in types.ts). */
 
 import { makeEnemy } from './enemy.js';
+import type { Difficulty } from '../state.js';
 import type { Hazard, LevelData, Platform } from './types.js';
 // Seagull/phone variants live in the EnemyState union now; makeEnemy dispatches on variant.
 
@@ -200,6 +201,120 @@ export function makeCarLevel(): LevelData {
     enemies,
     hazards,
     goal: { x: 2700, y: HORIZ_FLOOR - 60 },
+    scrollDir: 0,
+    progressAxis: 'x',
+  };
+}
+
+/** Sky Beach — vertical-extended beach prototype. Same horizontal traverse goal
+ *  (shark tooth at the right), but the world is 2400px tall with 5 cloud platform
+ *  layers stacked overhead, populated with seagulls — vertical exploration is
+ *  bonus. Enemy density scales with difficulty for the open-world prototype. */
+export function makeSkyBeachLevel(difficulty: Difficulty): LevelData {
+  const SKY_W = 2800;
+  const SKY_H = 2400;
+  const SKY_FLOOR = SKY_H - 32;
+
+  // Cloud platform layer Y positions (top → bottom).
+  const layerYs = [350, 700, 1100, 1500, 1900];
+
+  // Spread cloud platforms across X per layer; each layer uses a different
+  // pattern so vertical jump puzzles stay interesting (avoid all stacking).
+  const layerXs: number[][] = [
+    [200, 900, 1600, 2300],
+    [500, 1300, 2100],
+    [120, 800, 1500, 2200, 2600],
+    [400, 1100, 1900],
+    [220, 1000, 1700, 2400],
+  ];
+
+  const cloud = (x: number, y: number, w: number): Platform => ({
+    x,
+    y,
+    w,
+    h: 22,
+    variant: 'cloud',
+    oneWay: true,
+  });
+
+  const platforms: Platform[] = [
+    // Sand floor (solid, full width).
+    { x: 0, y: SKY_FLOOR, w: SKY_W, h: 32 },
+  ];
+
+  // Build cloud layers with varying widths (140-200px) for jump-puzzle feel.
+  for (let li = 0; li < layerYs.length; li++) {
+    const y = layerYs[li]!;
+    const xs = layerXs[li]!;
+    for (let xi = 0; xi < xs.length; xi++) {
+      const x = xs[xi]!;
+      const width = 140 + ((li + xi) % 4) * 20; // 140, 160, 180, 200 cycle
+      platforms.push(cloud(x, y, width));
+    }
+  }
+
+  // Hot-sand patches on the ground — same shape as makeBeachLevel.
+  const hot = (x: number, w: number): Hazard => ({
+    x,
+    y: SKY_FLOOR - 14,
+    w,
+    h: 14,
+    variant: 'hot-sand',
+  });
+
+  const hazards: Hazard[] = [
+    hot(420, 160),
+    hot(900, 200),
+    hot(1500, 160),
+    hot(2080, 200),
+  ];
+
+  // Difficulty-scaled enemy counts.
+  // easy:   3 ground rocks + 2 seagulls/layer  (3 + 10 = 13)
+  // medium: 6 ground rocks + ~3.5 seagulls/layer (6 + 18 = 24)
+  // hard:   8 ground rocks + ~5.5 seagulls/layer (8 + 28 = 36)
+  const groundCount = difficulty === 'easy' ? 3 : difficulty === 'medium' ? 6 : 8;
+  // Per-layer seagull spread: easy=2 each; medium alternates 3/4; hard alternates 5/6.
+  const seagullSpread =
+    difficulty === 'easy'
+      ? [2, 2, 2, 2, 2]
+      : difficulty === 'medium'
+      ? [4, 3, 4, 4, 3]
+      : [6, 5, 6, 6, 5];
+
+  const enemies = [];
+
+  // Ground patrols (rock variant) — evenly spaced across the floor, avoiding the
+  // hot-sand patches by sitting between them.
+  const groundY = SKY_FLOOR - 56;
+  for (let i = 0; i < groundCount; i++) {
+    const x = 220 + ((SKY_W - 440) / Math.max(1, groundCount - 1)) * i;
+    enemies.push(makeEnemy(x, groundY, 'rock', 32));
+  }
+
+  // Seagulls per cloud layer — hovering ~50px above each layer's top.
+  for (let li = 0; li < layerYs.length; li++) {
+    const layerY = layerYs[li]!;
+    const count = seagullSpread[li]!;
+    const seagullY = layerY - 60;
+    for (let i = 0; i < count; i++) {
+      // Spread across full world width per layer, offset slightly per layer
+      // so seagulls in adjacent layers don't perfectly stack.
+      const stride = (SKY_W - 200) / Math.max(1, count);
+      const x = 100 + stride * i + (li % 2 === 0 ? 0 : stride / 2);
+      enemies.push(makeEnemy(x, seagullY, 'seagull', 220));
+    }
+  }
+
+  return {
+    map: 'sky-beach',
+    width: SKY_W,
+    height: SKY_H,
+    playerStart: { x: 80, y: 2280 },
+    platforms,
+    enemies,
+    hazards,
+    goal: { x: 2700, y: 2336 },
     scrollDir: 0,
     progressAxis: 'x',
   };

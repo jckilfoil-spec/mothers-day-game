@@ -9,7 +9,10 @@
  * to an in-memory store so the game stays playable but won't survive a reload.
  */
 
-export type MapId = 'mountain' | 'cave' | 'beach' | 'car';
+export type MapId = 'mountain' | 'cave' | 'beach' | 'car' | 'sky-beach';
+
+/** Difficulty for the open-world prototype only. The 4 solid maps don't read this. */
+export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export interface Character {
   id: string;
@@ -32,6 +35,35 @@ export interface Settings {
   /** When true, hazards damage the player. 5 HP per life, 3 lives per character —
    *  losing all 3 deletes the character. Default off; pure whimsy unless toggled. */
   deathMode: boolean;
+
+  // ---------- Accessibility + UI state (added on launch night) ----------
+
+  /** Disables non-essential motion (confetti rain, banner slide-in, bounce-in
+   *  animations, parallax). Defaults to the OS `prefers-reduced-motion` value
+   *  on first read; explicit toggles persist regardless of the OS pref. */
+  reduceMotion: boolean;
+  /** Body class `hc` — bumps DOM contrast (HUD chip, banner, settings panel).
+   *  Canvas outlines (platforms/hero/enemies/goal) are a TODO at the render layer. */
+  highContrast: boolean;
+  /** Body class `lg-text` — bumps font-size on HUD/banner/settings/cookie banner
+   *  by ~15%. Doesn't touch canvas text (timer pill etc.). */
+  largeText: boolean;
+  /** When false, future `Game.cameraShake()` will no-op. Camera shake isn't
+   *  implemented yet; this toggle persists for forward-compat. */
+  screenShake: boolean;
+  /** When true, damage/goal stingers (ouch, honk, defeat, win) play through a
+   *  separate gain node so they're audible even when master sound is muted. */
+  audioCues: boolean;
+  /** Which collapsible sections in the settings panel are expanded. Persisted
+   *  so a user who opens 'a11y' once doesn't have to re-open it next session. */
+  uiOpenSections: string[];
+  /** Set true once the user clicks `×` on the in-game controls banner; the
+   *  banner is then suppressed on every future run (controls live in gear ▸ Controls). */
+  controlsBannerDismissed: boolean;
+
+  /** Last-picked difficulty for the open-world prototype map. Persisted so the
+   *  selector remembers across sessions. The 4 solid maps ignore this. */
+  prototypeDifficulty: Difficulty;
 }
 
 const CHARACTERS_KEY = 'mdg.characters';
@@ -45,7 +77,28 @@ const DEFAULT_SETTINGS: Settings = {
   lastMap: null,
   zoom: 1,
   deathMode: false,
+  // a11y defaults — reduceMotion is overridden by detectReduceMotion() below
+  // when a user has no stored preference yet.
+  reduceMotion: false,
+  highContrast: false,
+  largeText: false,
+  screenShake: true,
+  audioCues: true,
+  uiOpenSections: [],
+  controlsBannerDismissed: false,
+  prototypeDifficulty: 'easy',
 };
+
+/** Read the OS-level `prefers-reduced-motion` media query. Returns false in any
+ *  environment without `window.matchMedia` (tests, SSR). */
+function detectReduceMotion(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
 
 const DEFAULT_MESSAGE =
   'Thank you so much for everything mom, you gave me the world and I love you so much.';
@@ -209,7 +262,15 @@ export function deleteCharacter(id: string): void {
 // ---------------- Settings ----------------
 
 export function getSettings(): Settings {
-  return { ...DEFAULT_SETTINGS, ...readJSON<Partial<Settings>>(SETTINGS_KEY, {}) };
+  const stored = readJSON<Partial<Settings>>(SETTINGS_KEY, {});
+  const merged: Settings = { ...DEFAULT_SETTINGS, ...stored };
+  // Honor the OS-level `prefers-reduced-motion` as the default, but only when
+  // the user hasn't explicitly toggled our setting yet. Once they do, their
+  // explicit value wins (so a user who opted INTO motion overrides their OS pref).
+  if (stored.reduceMotion === undefined) {
+    merged.reduceMotion = detectReduceMotion();
+  }
+  return merged;
 }
 
 export function saveSettings(s: Settings): void {
@@ -239,6 +300,38 @@ export function setZoom(zoom: number): void {
 
 export function setDeathMode(deathMode: boolean): void {
   saveSettings({ ...getSettings(), deathMode });
+}
+
+// ---------- a11y + UI setters ----------
+
+export function setReduceMotion(v: boolean): void {
+  saveSettings({ ...getSettings(), reduceMotion: v });
+}
+export function setHighContrast(v: boolean): void {
+  saveSettings({ ...getSettings(), highContrast: v });
+}
+export function setLargeText(v: boolean): void {
+  saveSettings({ ...getSettings(), largeText: v });
+}
+export function setScreenShake(v: boolean): void {
+  saveSettings({ ...getSettings(), screenShake: v });
+}
+export function setAudioCues(v: boolean): void {
+  saveSettings({ ...getSettings(), audioCues: v });
+}
+export function setControlsBannerDismissed(v: boolean): void {
+  saveSettings({ ...getSettings(), controlsBannerDismissed: v });
+}
+export function setPrototypeDifficulty(v: Difficulty): void {
+  saveSettings({ ...getSettings(), prototypeDifficulty: v });
+}
+/** Toggle a collapsible-section id into / out of `uiOpenSections`. */
+export function toggleUiSection(section: string): void {
+  const s = getSettings();
+  const open = new Set(s.uiOpenSections);
+  if (open.has(section)) open.delete(section);
+  else open.add(section);
+  saveSettings({ ...s, uiOpenSections: [...open] });
 }
 
 export { DEFAULT_MESSAGE };
