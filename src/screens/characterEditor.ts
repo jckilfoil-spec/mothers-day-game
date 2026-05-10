@@ -5,6 +5,7 @@ import {
   getCharacter,
   updateCharacter,
   selectCharacter,
+  getSettings,
   DEFAULT_MESSAGE,
 } from '../state.js';
 import { cropFaceToDataUrl, fileToDataUrl, loadImage } from '../util/face.js';
@@ -51,7 +52,7 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
   // ---- Step 1+2 — upload + crop ----
   function renderUpload(): void {
     clear(stage);
-    stage.appendChild(el('h2', {}, ['1. Upload a photo']));
+    stage.appendChild(el('h2', {}, ['Upload a photo']));
     const input = el('input', {
       type: 'file',
       accept: 'image/*',
@@ -94,11 +95,39 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
           style: 'height:44px;font-size:1rem;padding:0 18px',
           onclick: () => {
             croppedDataUrl = null;
-            renderName();
+            sourceImg = null;
+            goToNameStep();
           },
         }, ['skip and use a silhouette']),
       ]),
     );
+  }
+
+  // Collapsed summary of the photo step, shown above the name step once the
+  // user has either picked + cropped a photo or skipped to a silhouette.
+  function renderPhotoSummary(): void {
+    clear(stage);
+    stage.appendChild(el('h2', {}, ['Photo']));
+    stage.appendChild(
+      el('p', { class: 'crop-hint' }, [
+        croppedDataUrl ? 'Want to change the photo? ' : 'Want to add a photo? ',
+        el('button', {
+          class: 'btn btn--secondary',
+          style: 'height:44px;font-size:1rem;padding:0 18px',
+          onclick: renderUpload,
+        }, [croppedDataUrl ? 'Pick a new one' : 'Pick a photo']),
+      ]),
+    );
+  }
+
+  // Collapse the photo card, render the name+message form, scroll it into view.
+  function goToNameStep(): void {
+    renderPhotoSummary();
+    renderName();
+    const behavior: ScrollBehavior = getSettings().reduceMotion ? 'auto' : 'smooth';
+    requestAnimationFrame(() => {
+      nameStep.scrollIntoView({ behavior, block: 'start' });
+    });
   }
 
   async function handleFile(file: File): Promise<void> {
@@ -115,7 +144,7 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
   function renderCrop(): void {
     if (!sourceImg) return;
     clear(stage);
-    stage.appendChild(el('h2', {}, ['2. Frame the face']));
+    stage.appendChild(el('h2', {}, ['Frame the face']));
 
     const canvas = el('canvas', {}) as HTMLCanvasElement;
     const cropStage = el('div', { class: 'crop-stage' }, [canvas]);
@@ -153,7 +182,7 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
           if (!sourceImg) return;
           croppedDataUrl = cropFaceToDataUrl(sourceImg, cropCenter.x, cropCenter.y, cropRadius);
           sfx.click();
-          renderName();
+          goToNameStep();
         },
       }, ['Looks good →']),
     ]);
@@ -242,7 +271,7 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
 
   function renderName(): void {
     clear(nameStep);
-    nameStep.appendChild(el('h2', {}, ['3. Name and message']));
+    nameStep.appendChild(el('h2', {}, ['Name and message']));
 
     const preview = croppedDataUrl
       ? el('img', {
@@ -329,19 +358,9 @@ export const characterEditorScreen: Screen = (root, nav, route) => {
   }
 
   if (editing && editing.faceImage) {
-    // Editing existing — go straight to name/message
+    // Editing existing — go straight to name/message with a collapsed photo card.
+    renderPhotoSummary();
     renderName();
-    stage.appendChild(el('h2', {}, ['Photo']));
-    stage.appendChild(
-      el('p', { class: 'crop-hint' }, [
-        'Want to change the photo? ',
-        el('button', {
-          class: 'btn btn--secondary',
-          style: 'height:44px;font-size:1rem;padding:0 18px',
-          onclick: renderUpload,
-        }, ['Pick a new one']),
-      ]),
-    );
   } else {
     renderUpload();
   }
